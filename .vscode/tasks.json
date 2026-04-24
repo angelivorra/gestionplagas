@@ -1,0 +1,86 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev: Iniciar servidor",
+      "type": "shell",
+      "command": "npm run dev",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+):\\s+(error|warning):\\s+(.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Starting.*",
+          "endsPattern": ".*Ready in.*"
+        }
+      }
+    },
+    {
+      "label": "Build: Compilar producción",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Build: Verificar tipos TypeScript",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "Deps: Instalar dependencias",
+      "type": "shell",
+      "command": "npm install",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Deps: Actualizar dependencias",
+      "type": "shell",
+      "command": "npm update",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "shadcn: Añadir componente",
+      "type": "shell",
+      "command": "npx shadcn add ${input:componentName}",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Git: Estado",
+      "type": "shell",
+      "command": "git status",
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Git: Commit rápido",
+      "type": "shell",
+      "command": "git add -A && git commit -m \"${input:commitMessage}\"",
+      "group": "none",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "componentName",
+      "type": "promptString",
+      "description": "Nombre del componente shadcn (ej: button, dialog, select)"
+    },
+    {
+      "id": "commitMessage",
+      "type": "promptString",
+      "description": "Mensaje del commit"
+    }
+  ]
+}
