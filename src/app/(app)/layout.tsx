@@ -15,11 +15,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Box
         component="main"
         sx={{
-          maxWidth: 600,
-          mx: 'auto',
           px: 2,
           pt: 2.5,
-          pb: '96px', // espacio para FAB + bottom nav
+          pb: '96px',
         }}
       >
         {children}

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import ClientesList from '@/components/clientes-list'
+import PageContainer from '@/components/page-container'
 import type { Cliente } from '@/lib/types'
 
 export default async function ClientesPage() {
@@ -9,5 +10,5 @@ export default async function ClientesPage() {
     .select('*')
     .order('nombre_comercial')
 
-  return <ClientesList clientes={(clientes ?? []) as Cliente[]} />
+  return <PageContainer><ClientesList clientes={(clientes ?? []) as Cliente[]} /></PageContainer>
 }

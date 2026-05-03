@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import VisitaForm from '@/components/visita-form'
+import PageContainer from '@/components/page-container'
 
 export default async function VisitaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -14,5 +15,5 @@ export default async function VisitaPage({ params }: { params: Promise<{ id: str
 
   if (error || !visita) notFound()
 
-  return <VisitaForm visitaId={id} initialData={visita} />
+  return <PageContainer><VisitaForm visitaId={id} initialData={visita} /></PageContainer>
 }

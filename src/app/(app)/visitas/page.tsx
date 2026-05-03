@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import VisitasList from '@/components/visitas-list'
+import PageContainer from '@/components/page-container'
 import type { Visita } from '@/lib/types'
 
 export default async function VisitasPage() {
@@ -9,5 +10,5 @@ export default async function VisitasPage() {
     .select('*, clientes(nombre_comercial)')
     .order('created_at', { ascending: false })
 
-  return <VisitasList visitas={(visitas ?? []) as (Visita & { clientes?: { nombre_comercial: string } | null })[]} />
+  return <PageContainer><VisitasList visitas={(visitas ?? []) as (Visita & { clientes?: { nombre_comercial: string } | null })[]} /></PageContainer>
 }

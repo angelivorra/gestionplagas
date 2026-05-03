@@ -20,16 +20,27 @@ export type Producto = {
   ficha_seguridad_url: string | null
 }
 
+export type ProductoAplicado = {
+  id: string
+  producto_id: string
+  cantidad: string
+  plazo_seguridad: string
+  lugares_viviendas: string[]
+  lugares_hosteleria: string[]
+}
+
+export type ServicioAplicado = {
+  id: string
+  tipo: string
+  productos: ProductoAplicado[]
+}
+
 export type Visita = {
   id: string
   cliente_id: string | null
   fecha_tratamiento: string
   descripcion_servicio: string | null
-  tipo_servicio: string | null
-  producto_id: string | null
-  cantidad: string | null
-  lugar_actuacion: string[] | null
-  plazo_seguridad: string | null
+  servicios: ServicioAplicado[] | null
   observaciones: string | null
   hora_inicio: string | null
   hora_fin: string | null

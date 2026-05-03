@@ -1,6 +1,6 @@
 import React from 'react'
 import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer'
-import type { Visita, Cliente, Producto } from '@/lib/types'
+import type { Visita, Cliente, Producto, ServicioAplicado } from '@/lib/types'
 
 const C = {
   green: '#059669',
@@ -156,11 +156,11 @@ function Field({ label, value, flex = 1, last = false }: {
 export interface PDTProps {
   visita: Visita
   cliente: Cliente | null
-  producto: Producto | null
+  productosMap: Record<string, Producto>
   partNum: string
 }
 
-export default function PDTDocument({ visita, cliente, producto, partNum }: PDTProps) {
+export default function PDTDocument({ visita, cliente, productosMap, partNum }: PDTProps) {
   const horaRango = visita.hora_inicio
     ? `${visita.hora_inicio}${visita.hora_fin ? ` – ${visita.hora_fin}` : ''}`
     : null
@@ -174,14 +174,22 @@ export default function PDTDocument({ visita, cliente, producto, partNum }: PDTP
           <View>
             <Text style={s.logo}>SACEBA</Text>
             <Text style={s.logoTagline}>Control de Plagas</Text>
-            <Text style={s.logoInfo}>NIF: B-00000000</Text>
-            <Text style={s.logoInfo}>Tel: 000 000 000</Text>
-            <Text style={s.logoInfo}>info@saceba.es</Text>
+            <Text style={s.logoInfo}>Carmen Cerezuela Bastida</Text>
+            <Text style={s.logoInfo}>NIF: 17470907S</Text>
+            <Text style={s.logoInfo}>Tel: 608 285 800</Text>
+            <Text style={s.logoInfo}>sacebacontrol@gmail.com</Text>
+            <Text style={s.logoInfo}>ROESB: XXXX-MUR-TXX</Text>
           </View>
           <View style={s.titleBlock}>
             <Text style={s.docTitle}>PARTE DE TRABAJO</Text>
-            <Text style={s.docMeta}>Fecha: {fmt(visita.fecha_tratamiento)}</Text>
-            {horaRango && <Text style={s.docMeta}>Hora: {horaRango}</Text>}
+            <Text style={[s.docMeta, { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.dark, marginTop: 5 }]}>
+              {fmt(visita.fecha_tratamiento)}
+            </Text>
+            {horaRango && (
+              <Text style={[s.docMeta, { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.dark }]}>
+                {horaRango}
+              </Text>
+            )}
             <View style={s.numBadge}>
               <Text style={s.numBadgeText}>PDT-{partNum}</Text>
             </View>
@@ -206,55 +214,58 @@ export default function PDTDocument({ visita, cliente, producto, partNum }: PDTP
           </View>
         )}
 
-        {/* ── Servicio ── */}
-        {(visita.descripcion_servicio || visita.tipo_servicio) && (
+        {/* ── Descripción del servicio ── */}
+        {visita.descripcion_servicio && (
           <View style={s.section}>
             <SectionBar>Descripción del servicio</SectionBar>
-            <View style={s.row}>
-              <Field label="Descripción" value={visita.descripcion_servicio} />
-              <Field label="Tipo de servicio" value={visita.tipo_servicio} last />
+            <Text style={s.value}>{visita.descripcion_servicio}</Text>
+          </View>
+        )}
+
+        {/* ── Tipos de servicio y productos ── */}
+        {((visita.servicios as ServicioAplicado[] | null) ?? []).map((servicio, si) => {
+          const productosValidos = servicio.productos.filter(p => p.producto_id)
+          const lugares = [...new Set([...productosValidos.flatMap(p => [...p.lugares_viviendas, ...p.lugares_hosteleria])])]
+          return (
+            <View key={si} style={s.section}>
+              <SectionBar>{servicio.tipo || `Tipo de servicio ${si + 1}`}</SectionBar>
+
+              {productosValidos.length > 0 && (
+                <View style={{ marginBottom: lugares.length > 0 ? 8 : 0 }}>
+                  <View style={s.tableHead}>
+                    <Text style={[s.tableHeadCell, { flex: 2 }]}>Producto</Text>
+                    <Text style={[s.tableHeadCell, { flex: 1.2 }]}>Nº Registro</Text>
+                    <Text style={[s.tableHeadCell, { flex: 0.8, textAlign: 'right' }]}>Cantidad</Text>
+                    <Text style={[s.tableHeadCell, { flex: 1.2, textAlign: 'right' }]}>Plazo seguridad</Text>
+                  </View>
+                  {servicio.productos.filter(pa => pa.producto_id).map((pa, pi) => {
+                    const prod = productosMap[pa.producto_id]
+                    const lugaresProducto = [...pa.lugares_viviendas, ...pa.lugares_hosteleria]
+                    return (
+                      <View key={pi}>
+                        <View style={s.tableRow}>
+                          <Text style={[s.tableCell, { flex: 2 }]}>{prod?.nombre_comercial ?? '—'}</Text>
+                          <Text style={[s.tableCell, { flex: 1.2 }]}>{prod?.numero_registro ?? '—'}</Text>
+                          <Text style={[s.tableCell, { flex: 0.8, textAlign: 'right' }]}>{pa.cantidad || '—'}</Text>
+                          <Text style={[s.tableCell, { flex: 1.2, textAlign: 'right' }]}>{pa.plazo_seguridad || (prod?.plazo_seguridad ? `${prod.plazo_seguridad} h` : '—')}</Text>
+                        </View>
+                        {lugaresProducto.length > 0 && (
+                          <View style={[s.chipsWrap, { paddingHorizontal: 8, paddingBottom: 4 }]}>
+                            {lugaresProducto.map((lugar, li) => (
+                              <View key={li} style={s.chip}>
+                                <Text style={s.chipText}>{lugar}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    )
+                  })}
+                </View>
+              )}
             </View>
-          </View>
-        )}
-
-        {/* ── Actuación ── */}
-        {(producto || (visita.lugar_actuacion && visita.lugar_actuacion.length > 0)) && (
-          <View style={s.section}>
-            <SectionBar>Actuación</SectionBar>
-
-            {producto && (
-              <View style={{ marginBottom: 8 }}>
-                <View style={s.tableHead}>
-                  <Text style={[s.tableHeadCell, { flex: 2 }]}>Producto</Text>
-                  <Text style={[s.tableHeadCell, { flex: 1.5 }]}>Nº Registro</Text>
-                  <Text style={[s.tableHeadCell, { flex: 0.8 }]}>Cantidad</Text>
-                  <Text style={[s.tableHeadCell, { flex: 1.5 }]}>Plazo de seguridad</Text>
-                </View>
-                <View style={s.tableRow}>
-                  <Text style={[s.tableCell, { flex: 2 }]}>{producto.nombre_comercial}</Text>
-                  <Text style={[s.tableCell, { flex: 1.5 }]}>{producto.numero_registro ?? '—'}</Text>
-                  <Text style={[s.tableCell, { flex: 0.8 }]}>{visita.cantidad ?? '—'}</Text>
-                  <Text style={[s.tableCell, { flex: 1.5 }]}>
-                    {visita.plazo_seguridad || (producto.plazo_seguridad ? `${producto.plazo_seguridad} h` : '—')}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {visita.lugar_actuacion && visita.lugar_actuacion.length > 0 && (
-              <View>
-                <Text style={[s.label, { marginBottom: 4 }]}>ZONAS DE ACTUACIÓN</Text>
-                <View style={s.chipsWrap}>
-                  {visita.lugar_actuacion.map((lugar, i) => (
-                    <View key={i} style={s.chip}>
-                      <Text style={s.chipText}>{lugar}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-        )}
+          )
+        })}
 
         {/* ── Observaciones ── */}
         {visita.observaciones && (
@@ -284,7 +295,7 @@ export default function PDTDocument({ visita, cliente, producto, partNum }: PDTP
           <SectionBar>Firmas y conformidad</SectionBar>
           <View style={s.sigsRow}>
             <View style={[s.sigBox, s.sigBoxLeft]}>
-              <Text style={s.sigLabel}>RESPONSABLE APLICADOR</Text>
+              <Text style={s.sigLabel}>Técnico aplicador 17470907S</Text>
               {visita.firma_tecnico_url
                 ? <Image src={visita.firma_tecnico_url} style={s.sigImg} />
                 : <View style={s.sigEmptyLine} />

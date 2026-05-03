@@ -4,15 +4,17 @@ import { NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
 import type { DocumentProps } from '@react-pdf/renderer'
 import PDTDocument from '@/lib/pdf/pdt-document'
-import type { Visita, Cliente, Producto } from '@/lib/types'
+import type { Visita, Cliente, Producto, ServicioAplicado } from '@/lib/types'
+import { getOrCreateFolder, uploadToDrive, makePublic } from '@/lib/google/drive'
+import { sendEmail } from '@/lib/google/gmail'
 
-type Row = Visita & { clientes: Cliente | null; productos: Producto | null }
+type Row = Visita & { clientes: Cliente | null }
 
 async function buildPdf(id: string) {
   const supabase = await createClient()
   const { data: raw, error } = await supabase
     .from('visitas')
-    .select('*, clientes(*), productos(*)')
+    .select('*, clientes(*)')
     .eq('id', id)
     .single()
 
@@ -20,12 +22,20 @@ async function buildPdf(id: string) {
 
   const row = raw as Row
   const cliente = row.clientes ?? null
-  const producto = row.productos ?? null
   const partNum = id.slice(-8).toUpperCase()
+
+  const servicios = (row.servicios as ServicioAplicado[] | null) ?? []
+  const productoIds = [...new Set(servicios.flatMap(s => s.productos.map(p => p.producto_id).filter(Boolean)))]
+
+  let productosMap: Record<string, Producto> = {}
+  if (productoIds.length > 0) {
+    const { data: prods } = await supabase.from('productos').select('*').in('id', productoIds)
+    productosMap = Object.fromEntries((prods ?? []).map(p => [p.id, p]))
+  }
 
   const element = React.createElement(
     PDTDocument,
-    { visita: row, cliente, producto, partNum },
+    { visita: row, cliente, productosMap, partNum },
   ) as React.ReactElement<DocumentProps>
 
   const buffer = await renderToBuffer(element)
@@ -40,7 +50,6 @@ function pdfFilename(row: Row) {
   return `PDT-${empresa}-${row.fecha_tratamiento}.pdf`
 }
 
-// GET → genera y descarga el PDF en el momento (requiere sesión activa)
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const result = await buildPdf(id)
@@ -56,25 +65,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   })
 }
 
-// POST → genera, sube a Storage y guarda pdf_url en la visita
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const result = await buildPdf(id)
   if (!result) return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
 
-  const { buffer } = result
+  const { buffer, row } = result
   const supabase = await createClient()
 
-  const { error: uploadError } = await supabase.storage
-    .from('pdfs')
-    .upload(`${id}.pdf`, new Uint8Array(buffer), { contentType: 'application/pdf', upsert: true })
+  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
+  const pdfsFolder = await getOrCreateFolder('PDFs', rootId)
+  const { id: fileId, webViewLink } = await uploadToDrive(
+    Buffer.from(buffer),
+    pdfFilename(row),
+    'application/pdf',
+    pdfsFolder,
+  )
+  await makePublic(fileId)
 
-  if (uploadError) {
-    return NextResponse.json({ error: `Error al subir PDF: ${uploadError.message}` }, { status: 500 })
-  }
-
-  const { data: urlData } = supabase.storage.from('pdfs').getPublicUrl(`${id}.pdf`)
-  const pdf_url = urlData.publicUrl
+  const pdf_url = webViewLink
 
   const { data: updated, error: updateError } = await supabase
     .from('visitas')
@@ -83,8 +92,18 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     .select()
     .single()
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  const email = row.clientes?.correo_electronico
+  if (email) {
+    const cliente = row.clientes?.nombre_comercial ?? ''
+    const fecha = row.fecha_tratamiento
+    await sendEmail({
+      to: email,
+      subject: `Parte de Trabajo - ${cliente} - ${fecha}`,
+      body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${fecha}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
+      pdfUrl: pdf_url,
+    }).catch(err => console.error('Error enviando email:', err))
   }
 
   return NextResponse.json({ data: updated, pdf_url })

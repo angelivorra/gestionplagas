@@ -32,7 +32,7 @@ import ClienteSearchSelect from '@/components/cliente-search-select'
 import FotosGrid from '@/components/fotos-grid'
 import GeolocalizacionBtn from '@/components/geolocalizacion-btn'
 import SignaturePad from '@/components/signature-pad'
-import type { Visita, Producto } from '@/lib/types'
+import type { Visita, Producto, ServicioAplicado, ProductoAplicado } from '@/lib/types'
 
 interface Props {
   visitaId: string
@@ -159,6 +159,80 @@ function ProductoSelect({ value, onChange, disabled }: { value: string; onChange
   )
 }
 
+function newProducto(): ProductoAplicado {
+  return { id: crypto.randomUUID(), producto_id: '', cantidad: '', plazo_seguridad: '', lugares_viviendas: [], lugares_hosteleria: [] }
+}
+
+function newServicio(): ServicioAplicado {
+  return { id: crypto.randomUUID(), tipo: '', productos: [newProducto()] }
+}
+
+function ProductoBlock({ item, onChange, onDelete, disabled }: {
+  item: ProductoAplicado
+  onChange: (u: ProductoAplicado) => void
+  onDelete: () => void
+  disabled?: boolean
+}) {
+  const upd = (patch: Partial<ProductoAplicado>) => onChange({ ...item, ...patch })
+  return (
+    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 1.5, mb: 1.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 10 }}>Producto</Typography>
+        {!disabled && <IconButton size="small" onClick={onDelete} sx={{ color: 'error.light' }}><DeleteIcon fontSize="small" /></IconButton>}
+      </Box>
+      <ProductoSelect value={item.producto_id} onChange={producto_id => upd({ producto_id })} disabled={disabled} />
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mt: 1.5 }}>
+        <TextField size="small" label="Cantidad" placeholder="Ej: 250ml" value={item.cantidad} onChange={e => upd({ cantidad: e.target.value })} disabled={disabled} />
+        <TextField size="small" label="Plazo de seguridad" placeholder="Ej: 4 horas" value={item.plazo_seguridad} onChange={e => upd({ plazo_seguridad: e.target.value })} disabled={disabled} />
+      </Box>
+      <Box sx={{ mt: 1.5 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>Viviendas / Comunidades</Typography>
+        <LugarMultiSelect categoria="Viviendas/Comunidades" selected={item.lugares_viviendas} onChange={lugares_viviendas => upd({ lugares_viviendas })} disabled={disabled} />
+      </Box>
+      <Box sx={{ mt: 1.5 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>Hostelería</Typography>
+        <LugarMultiSelect categoria="Hostelería" selected={item.lugares_hosteleria} onChange={lugares_hosteleria => upd({ lugares_hosteleria })} disabled={disabled} />
+      </Box>
+    </Box>
+  )
+}
+
+function ServicioBlock({ servicio, index, onChange, onDelete, disabled }: {
+  servicio: ServicioAplicado
+  index: number
+  onChange: (u: ServicioAplicado) => void
+  onDelete: () => void
+  disabled?: boolean
+}) {
+  function addProducto() { onChange({ ...servicio, productos: [...servicio.productos, newProducto()] }) }
+  function removeProducto(id: string) { onChange({ ...servicio, productos: servicio.productos.filter(p => p.id !== id) }) }
+  function updateProducto(id: string, u: ProductoAplicado) { onChange({ ...servicio, productos: servicio.productos.map(p => p.id === id ? u : p) }) }
+
+  return (
+    <Card sx={{ mb: 2 }}>
+      <Box sx={{ px: 2, py: 1.25, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="overline" color="text.secondary" sx={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+          Tipo de servicio {index + 1}
+        </Typography>
+        {!disabled && <IconButton size="small" onClick={onDelete} sx={{ color: 'error.light' }}><DeleteIcon fontSize="small" /></IconButton>}
+      </Box>
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 0, pt: '16px !important' }}>
+        <Box sx={{ mb: 2 }}>
+          <CreatableCombobox tabla="tipo_servicio" value={servicio.tipo} onChange={tipo => onChange({ ...servicio, tipo })} placeholder="Seleccionar tipo..." disabled={disabled} />
+        </Box>
+        {servicio.productos.map(p => (
+          <ProductoBlock key={p.id} item={p} onChange={u => updateProducto(p.id, u)} onDelete={() => removeProducto(p.id)} disabled={disabled} />
+        ))}
+        {!disabled && (
+          <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addProducto} sx={{ mt: 0.5 }}>
+            Añadir producto
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function VisitaForm({ visitaId, initialData }: Props) {
   const router = useRouter()
   const [data, setData] = useState(initialData)
@@ -174,6 +248,11 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
     setData(prev => ({ ...prev, [field]: value }))
     setSaved(false)
   }, [])
+
+  const servicios: ServicioAplicado[] = (data.servicios as ServicioAplicado[] | null) ?? []
+  function addServicio() { update('servicios', [...servicios, newServicio()]) }
+  function removeServicio(id: string) { update('servicios', servicios.filter(s => s.id !== id)) }
+  function updateServicio(id: string, u: ServicioAplicado) { update('servicios', servicios.map(s => s.id === id ? u : s)) }
 
   async function save(nuevoEstado?: 'borrador' | 'cerrado') {
     setSaving(true)
@@ -208,24 +287,23 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
     }
   }
 
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+
   async function handleDelete() {
     await fetch(`/api/visitas/${visitaId}`, { method: 'DELETE' })
     router.push('/visitas')
     router.refresh()
   }
 
-  function handleGmailOpen() {
-    const email = data.clientes?.correo_electronico ?? ''
-    const cliente = data.clientes?.nombre_comercial ?? ''
-    const fecha = data.fecha_tratamiento
-    const subject = encodeURIComponent(`Parte de Trabajo - ${cliente} - ${fecha}`)
-    const enlace = data.pdf_url
-      ? `\n\nPuede descargar el parte de trabajo en el siguiente enlace:\n${data.pdf_url}`
-      : ''
-    const body = encodeURIComponent(
-      `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${fecha}.${enlace}\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`
-    )
-    window.open(`https://mail.google.com/mail/?view=cm&to=${email}&su=${subject}&body=${body}`, '_blank')
+  async function handleSendEmail() {
+    setSendingEmail(true)
+    try {
+      await fetch(`/api/email/${visitaId}`, { method: 'POST' })
+      setEmailSent(true)
+    } finally {
+      setSendingEmail(false)
+    }
   }
 
   const cerrado = data.estado === 'cerrado'
@@ -283,27 +361,21 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
           <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Descripción del servicio</Typography>
           <CreatableCombobox tabla="descripcion_servicio" value={data.descripcion_servicio ?? ''} onChange={v => update('descripcion_servicio', v)} placeholder="Seleccionar..." allowDelete disabled={cerrado} />
         </Box>
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Tipo de servicio</Typography>
-          <CreatableCombobox tabla="tipo_servicio" value={data.tipo_servicio ?? ''} onChange={v => update('tipo_servicio', v)} placeholder="Seleccionar..." allowDelete disabled={cerrado} />
-        </Box>
       </Section>
 
-      <Section title="Actuación">
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>Viviendas / Comunidades</Typography>
-          <LugarMultiSelect categoria="Viviendas/Comunidades" selected={data.lugar_actuacion ?? []} onChange={v => update('lugar_actuacion', v)} disabled={cerrado} />
+      {servicios.map((s, i) => (
+        <ServicioBlock key={s.id} servicio={s} index={i} onChange={u => updateServicio(s.id, u)} onDelete={() => removeServicio(s.id)} disabled={cerrado} />
+      ))}
+
+      {!cerrado && (
+        <Box sx={{ mb: 2 }}>
+          <Button variant="outlined" fullWidth startIcon={<AddIcon />} onClick={addServicio}>
+            Añadir tipo de servicio
+          </Button>
         </Box>
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>Hostelería</Typography>
-          <LugarMultiSelect categoria="Hostelería" selected={data.lugar_actuacion ?? []} onChange={v => update('lugar_actuacion', v)} disabled={cerrado} />
-        </Box>
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Producto aplicado</Typography>
-          <ProductoSelect value={data.producto_id ?? ''} onChange={v => update('producto_id', v)} disabled={cerrado} />
-        </Box>
-        <TextField label="Cantidad" fullWidth placeholder="Ej: 250ml, 2 unidades..." value={data.cantidad ?? ''} onChange={e => update('cantidad', e.target.value)} disabled={cerrado} />
-        <TextField label="Plazo de seguridad" fullWidth placeholder="Ej: 4 horas, 24 horas..." value={data.plazo_seguridad ?? ''} onChange={e => update('plazo_seguridad', e.target.value)} disabled={cerrado} />
+      )}
+
+      <Section title="Observaciones">
         <TextField label="Observaciones" fullWidth multiline rows={3} placeholder="Observaciones del tratamiento..." value={data.observaciones ?? ''} onChange={e => update('observaciones', e.target.value)} disabled={cerrado} />
       </Section>
 
@@ -408,11 +480,11 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
               <Button
                 variant="contained"
                 sx={{ flex: 1 }}
-                onClick={handleGmailOpen}
-                disabled={generatingPdf}
-                startIcon={<EmailIcon />}
+                onClick={handleSendEmail}
+                disabled={generatingPdf || sendingEmail}
+                startIcon={sendingEmail ? <CircularProgress size={14} color="inherit" /> : <EmailIcon />}
               >
-                Email
+                {sendingEmail ? 'Enviando...' : emailSent ? 'Enviado' : 'Enviar'}
               </Button>
             </>
           )}

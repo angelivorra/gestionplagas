@@ -24,6 +24,9 @@ import SaveIcon from '@mui/icons-material/Save'
 import NumbersIcon from '@mui/icons-material/Numbers'
 import TimerIcon from '@mui/icons-material/Timer'
 import BiotechIcon from '@mui/icons-material/Biotech'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import CircularProgress from '@mui/material/CircularProgress'
 import type { Producto } from '@/lib/types'
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -43,6 +46,54 @@ const emptyForm = (p: Producto) => ({
   plazo_seguridad: p.plazo_seguridad?.toString() ?? '',
   principios_activos: p.principios_activos ?? '',
 })
+
+function FichaUpload({ productoId, tipo, url, onUploaded }: {
+  productoId: string
+  tipo: 'tecnica' | 'seguridad'
+  url: string | null
+  onUploaded: (updated: Producto) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const label = tipo === 'tecnica' ? 'Ficha técnica' : 'Ficha de seguridad'
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('tipo', tipo)
+    const res = await fetch(`/api/productos/${productoId}/fichas`, { method: 'POST', body: fd })
+    const { data } = await res.json()
+    if (data) onUploaded(data)
+    setUploading(false)
+    e.target.value = ''
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="body2" color={url ? 'text.primary' : 'text.disabled'}>{label}</Typography>
+        {url && (
+          <IconButton size="small" component="a" href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main' }}>
+            <OpenInNewIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+      <Button
+        component="label"
+        size="small"
+        variant={url ? 'outlined' : 'contained'}
+        startIcon={uploading ? <CircularProgress size={14} color="inherit" /> : <UploadFileIcon />}
+        disabled={uploading}
+        sx={{ minWidth: 110 }}
+      >
+        {uploading ? 'Subiendo...' : url ? 'Reemplazar' : 'Subir PDF'}
+        <input type="file" accept="application/pdf" hidden onChange={handleFile} />
+      </Button>
+    </Box>
+  )
+}
 
 export default function ProductoDetalle({ producto: inicial }: { producto: Producto }) {
   const router = useRouter()
@@ -134,6 +185,20 @@ export default function ProductoDetalle({ producto: inicial }: { producto: Produ
               Sin datos adicionales registrados
             </Typography>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Fichas */}
+      <Card sx={{ mb: 2 }}>
+        <Box sx={{ px: 2, py: 1.25, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="overline" color="text.secondary" sx={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>
+            Fichas del producto
+          </Typography>
+        </Box>
+        <CardContent sx={{ pt: '8px !important', pb: '8px !important' }}>
+          <FichaUpload productoId={producto.id} tipo="tecnica" url={producto.ficha_tecnica_url} onUploaded={setProducto} />
+          <Divider />
+          <FichaUpload productoId={producto.id} tipo="seguridad" url={producto.ficha_seguridad_url} onUploaded={setProducto} />
         </CardContent>
       </Card>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -50,7 +51,7 @@ function VisitaCard({ v }: { v: VisitaRow }) {
               {v.clientes?.nombre_comercial ?? 'Sin cliente'}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap>
-              {formatDate(v.fecha_tratamiento)}{v.tipo_servicio ? ` · ${v.tipo_servicio}` : ''}
+              {formatDate(v.fecha_tratamiento)}{v.servicios?.[0]?.tipo ? ` · ${v.servicios[0].tipo}` : ''}
             </Typography>
             {v.latitud && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, mt: 0.2 }}>
@@ -77,9 +78,24 @@ function VisitaCard({ v }: { v: VisitaRow }) {
 }
 
 export default function VisitasList({ visitas }: { visitas: VisitaRow[] }) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('recent')
   const [tab, setTab] = useState<'activas' | 'todas'>('activas')
+  const [creando, setCreando] = useState(false)
+
+  async function handleNuevaVisita() {
+    if (creando) return
+    setCreando(true)
+    const res = await fetch('/api/visitas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha_tratamiento: new Date().toISOString().split('T')[0] }),
+    })
+    const { data } = await res.json()
+    if (data?.id) router.push(`/visitas/${data.id}`)
+    else setCreando(false)
+  }
 
   const activasCount = visitas.filter(v => v.estado === 'borrador').length
 
@@ -89,8 +105,8 @@ export default function VisitasList({ visitas }: { visitas: VisitaRow[] }) {
       const q = search.toLowerCase()
       list = list.filter(v =>
         v.clientes?.nombre_comercial?.toLowerCase().includes(q) ||
-        v.tipo_servicio?.toLowerCase().includes(q) ||
-        v.descripcion_servicio?.toLowerCase().includes(q)
+        v.descripcion_servicio?.toLowerCase().includes(q) ||
+        v.servicios?.some(s => s.tipo?.toLowerCase().includes(q))
       )
     }
     const sorted = [...list]
@@ -188,8 +204,8 @@ export default function VisitasList({ visitas }: { visitas: VisitaRow[] }) {
       {/* FAB */}
       <Fab
         color="primary"
-        component={Link}
-        href="/visitas/nueva"
+        onClick={handleNuevaVisita}
+        disabled={creando}
         sx={{ position: 'fixed', bottom: 80, right: 16, borderRadius: 4 }}
         aria-label="Nueva visita"
       >

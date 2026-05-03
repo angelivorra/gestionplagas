@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getOrCreateFolder, uploadToDrive, deleteFromDrive, extractFileId } from '@/lib/google/drive'
+
+async function getFotosFolder(visitaId: string): Promise<string> {
+  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
+  const fotosId = await getOrCreateFolder('Fotos', rootId)
+  return getOrCreateFolder(visitaId, fotosId)
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,15 +28,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
   const ext = file.name.split('.').pop()
-  const path = `${id}/${Date.now()}.${ext}`
-  const { error: uploadError } = await supabase.storage.from('fotos').upload(path, file)
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  const filename = `${Date.now()}.${ext}`
+  const buffer = Buffer.from(await file.arrayBuffer())
 
-  const { data: { publicUrl } } = supabase.storage.from('fotos').getPublicUrl(path)
+  const folderId = await getFotosFolder(id)
+  const { webViewLink } = await uploadToDrive(buffer, filename, file.type || 'image/jpeg', folderId)
 
   const { data, error } = await supabase
     .from('visita_fotos')
-    .insert({ visita_id: id, foto_url: publicUrl })
+    .insert({ visita_id: id, foto_url: webViewLink })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -45,8 +52,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   const { data: foto } = await supabase.from('visita_fotos').select('foto_url').eq('id', fotoId).single()
   if (foto?.foto_url) {
-    const path = foto.foto_url.split('/fotos/')[1]
-    await supabase.storage.from('fotos').remove([path])
+    const fileId = extractFileId(foto.foto_url)
+    if (fileId) await deleteFromDrive(fileId).catch(() => null)
   }
 
   const { error } = await supabase.from('visita_fotos').delete().eq('id', fotoId).eq('visita_id', id)

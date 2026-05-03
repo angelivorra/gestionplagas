@@ -35,11 +35,25 @@ interface Visita { id: string; fecha_tratamiento: string; tipo_servicio: string 
 export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente; visitas: Visita[] }) {
   const router = useRouter()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [creando, setCreando] = useState(false)
 
   async function handleDelete() {
     await fetch(`/api/clientes/${cliente.id}`, { method: 'DELETE' })
     router.push('/clientes')
     router.refresh()
+  }
+
+  async function handleNuevaVisita() {
+    if (creando) return
+    setCreando(true)
+    const res = await fetch('/api/visitas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha_tratamiento: new Date().toISOString().split('T')[0], cliente_id: cliente.id }),
+    })
+    const { data } = await res.json()
+    if (data?.id) router.push(`/visitas/${data.id}`)
+    else setCreando(false)
   }
 
   return (
@@ -114,12 +128,12 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
         variant="contained"
         fullWidth
         size="large"
-        component={Link}
-        href={`/visitas/nueva?clienteId=${cliente.id}`}
+        onClick={handleNuevaVisita}
+        disabled={creando}
         startIcon={<AddIcon />}
         sx={{ mb: 3 }}
       >
-        Nueva visita
+        {creando ? 'Creando...' : 'Nueva visita'}
       </Button>
 
       {/* Historial */}

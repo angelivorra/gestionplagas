@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import AjustesClient from '@/components/ajustes-client'
+import PageContainer from '@/components/page-container'
 import type { OpcionLista } from '@/lib/types'
 
 const TABLAS = ['descripcion_servicio', 'tipo_servicio', 'lugar_actuacion']
@@ -20,5 +21,5 @@ export default async function AjustesPage() {
     })
   )
 
-  return <AjustesClient inicial={inicial} />
+  return <PageContainer><AjustesClient inicial={inicial} /></PageContainer>
 }
