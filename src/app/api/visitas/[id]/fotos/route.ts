@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import { getOrCreateFolder, uploadToDrive, deleteFromDrive, extractFileId } from '@/lib/google/drive'
 
 async function getFotosFolder(visitaId: string): Promise<string> {
-  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
-  const fotosId = await getOrCreateFolder('Fotos', rootId)
+  const sacebaId = await getOrCreateFolder('SACEBA')
+  const fotosId = await getOrCreateFolder('Fotos', sacebaId)
   return getOrCreateFolder(visitaId, fotosId)
 }
 

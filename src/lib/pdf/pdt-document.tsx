@@ -3,9 +3,9 @@ import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/render
 import type { Visita, Cliente, Producto, ServicioAplicado } from '@/lib/types'
 
 const C = {
-  green: '#059669',
-  greenDark: '#047857',
-  greenLight: '#d1fae5',
+  green: '#1e6fa8',
+  greenDark: '#154f7a',
+  greenLight: '#dbeafe',
   dark: '#111827',
   gray: '#6b7280',
   grayLight: '#9ca3af',

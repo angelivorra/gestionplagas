@@ -68,36 +68,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  console.log('[PDF] Iniciando generación para visita:', id)
-  console.log('[PDF] GOOGLE_DRIVE_FOLDER_ID:', process.env.GOOGLE_DRIVE_FOLDER_ID ?? 'NO DEFINIDO')
-  console.log('[PDF] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'OK' : 'NO DEFINIDO')
-  console.log('[PDF] GOOGLE_REFRESH_TOKEN:', process.env.GOOGLE_REFRESH_TOKEN ? `OK (${process.env.GOOGLE_REFRESH_TOKEN.slice(0, 10)}...)` : 'NO DEFINIDO')
-
   const result = await buildPdf(id)
   if (!result) return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
 
   const { buffer, row } = result
   const supabase = await createClient()
 
-  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
-
   let fileId: string
   let webViewLink: string
 
   try {
-    console.log('[PDF] Buscando/creando carpeta PDFs dentro de:', rootId)
-    const pdfsFolder = await getOrCreateFolder('PDFs', rootId)
-    console.log('[PDF] Carpeta PDFs ID:', pdfsFolder)
-
-    const filename = pdfFilename(row)
-    console.log('[PDF] Subiendo archivo:', filename)
-    const uploaded = await uploadToDrive(Buffer.from(buffer), filename, 'application/pdf', pdfsFolder)
+    const sacebaFolder = await getOrCreateFolder('SACEBA')
+    const pdfsFolder = await getOrCreateFolder('PDFs', sacebaFolder)
+    const uploaded = await uploadToDrive(Buffer.from(buffer), pdfFilename(row), 'application/pdf', pdfsFolder)
     fileId = uploaded.id
     webViewLink = uploaded.webViewLink
-    console.log('[PDF] Archivo subido, fileId:', fileId, 'link:', webViewLink)
-
     await makePublic(fileId)
-    console.log('[PDF] Archivo publicado')
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[PDF] Error subiendo a Drive:', msg)

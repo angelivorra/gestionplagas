@@ -28,8 +28,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .trim()
     .replace(/\s+/g, '-')
 
-  const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
-  const fichasFolder = await getOrCreateFolder('Fichas', rootId)
+  const sacebaId = await getOrCreateFolder('SACEBA')
+  const fichasFolder = await getOrCreateFolder('Fichas', sacebaId)
   const productoFolder = await getOrCreateFolder(nombreLimpio, fichasFolder)
 
   const label = tipo === 'tecnica' ? 'Ficha-Tecnica' : 'Ficha-Seguridad'
