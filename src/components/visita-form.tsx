@@ -19,6 +19,8 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import CircularProgress from '@mui/material/CircularProgress'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 import Autocomplete from '@mui/material/Autocomplete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -289,6 +291,7 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
 
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
 
   async function handleDelete() {
     await fetch(`/api/visitas/${visitaId}`, { method: 'DELETE' })
@@ -299,8 +302,15 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
   async function handleSendEmail() {
     setSendingEmail(true)
     try {
-      await fetch(`/api/email/${visitaId}`, { method: 'POST' })
-      setEmailSent(true)
+      const res = await fetch(`/api/email/${visitaId}`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setEmailError(json.error ?? 'Error al enviar el correo')
+      } else {
+        setEmailSent(true)
+      }
+    } catch {
+      setEmailError('Error de conexión al enviar el correo')
     } finally {
       setSendingEmail(false)
     }
@@ -514,6 +524,17 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
           <Button variant="contained" color="error" onClick={handleDelete}>Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!emailError}
+        autoHideDuration={6000}
+        onClose={() => setEmailError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setEmailError(null)} sx={{ width: '100%' }}>
+          {emailError}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

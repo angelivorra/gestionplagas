@@ -18,12 +18,18 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const email = cliente?.correo_electronico
   if (!email) return NextResponse.json({ error: 'El cliente no tiene email' }, { status: 400 })
 
-  await sendEmail({
-    to: email,
-    subject: `Parte de Trabajo - ${cliente?.nombre_comercial} - ${visita.fecha_tratamiento}`,
-    body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${visita.fecha_tratamiento}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
-    pdfUrl: visita.pdf_url ?? undefined,
-  })
+  try {
+    await sendEmail({
+      to: email,
+      subject: `Parte de Trabajo - ${cliente?.nombre_comercial} - ${visita.fecha_tratamiento}`,
+      body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${visita.fecha_tratamiento}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
+      pdfUrl: visita.pdf_url ?? undefined,
+    })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error desconocido'
+    console.error('Error enviando email:', message)
+    return NextResponse.json({ error: `No se pudo enviar el correo: ${message}` }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }
