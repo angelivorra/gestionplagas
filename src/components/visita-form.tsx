@@ -260,9 +260,18 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
     setSaving(true)
     const payload: Partial<Visita> = { ...data }
     if (nuevoEstado) payload.estado = nuevoEstado
-    if (nuevoEstado === 'cerrado') {
-      if (firmaTecnicoRef.current && !firmaTecnicoRef.current.isEmpty()) payload.firma_tecnico_url = firmaTecnicoRef.current.getDataURL()
-      if (firmaClienteRef.current && !firmaClienteRef.current.isEmpty()) payload.firma_cliente_url = firmaClienteRef.current.getDataURL()
+
+    // Capture signatures from canvas if drawn; otherwise remove from payload
+    // to avoid overwriting existing signatures in DB with null.
+    if (firmaTecnicoRef.current && !firmaTecnicoRef.current.isEmpty()) {
+      payload.firma_tecnico_url = firmaTecnicoRef.current.getDataURL()
+    } else {
+      delete payload.firma_tecnico_url
+    }
+    if (firmaClienteRef.current && !firmaClienteRef.current.isEmpty()) {
+      payload.firma_cliente_url = firmaClienteRef.current.getDataURL()
+    } else {
+      delete payload.firma_cliente_url
     }
     delete (payload as Record<string, unknown>).clientes
     delete (payload as Record<string, unknown>).id
