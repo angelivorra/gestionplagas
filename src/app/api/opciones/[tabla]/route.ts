@@ -20,13 +20,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ tab
   const { valor, categoria } = await request.json()
   if (!valor?.trim()) return NextResponse.json({ error: 'Valor requerido' }, { status: 400 })
 
-  const { data: existing } = await supabase
+  const query = supabase
     .from('opciones_lista')
-    .select('id')
+    .select('*')
     .eq('tabla', tabla)
     .eq('valor', valor.trim())
-    .maybeSingle()
 
+  if (categoria) query.eq('categoria', categoria)
+  else query.is('categoria', null)
+
+  const { data: existing } = await query.maybeSingle()
   if (existing) return NextResponse.json({ data: existing })
 
   const { data, error } = await supabase
