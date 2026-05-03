@@ -5,7 +5,6 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import type { DocumentProps } from '@react-pdf/renderer'
 import PDTDocument from '@/lib/pdf/pdt-document'
 import type { Visita, Cliente, Producto, ServicioAplicado } from '@/lib/types'
-import { getOrCreateFolder, uploadToDrive, makePublic } from '@/lib/google/drive'
 import { sendEmail } from '@/lib/google/gmail'
 
 type Row = Visita & { clientes: Cliente | null }
@@ -74,27 +73,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { buffer, row } = result
   const supabase = await createClient()
 
-  let fileId: string
-  let webViewLink: string
-
-  try {
-    const sacebaFolder = await getOrCreateFolder('SACEBA')
-    const pdfsFolder = await getOrCreateFolder('PDFs', sacebaFolder)
-    const uploaded = await uploadToDrive(Buffer.from(buffer), pdfFilename(row), 'application/pdf', pdfsFolder)
-    fileId = uploaded.id
-    webViewLink = uploaded.webViewLink
-    await makePublic(fileId)
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error('[PDF] Error subiendo a Drive:', msg)
-    return NextResponse.json({ error: `Error subiendo a Drive: ${msg}` }, { status: 500 })
-  }
-
-  const pdf_url = webViewLink
-
   const { data: updated, error: updateError } = await supabase
     .from('visitas')
-    .update({ pdf_url })
+    .update({ pdf_url: null })
     .eq('id', id)
     .select()
     .single()
@@ -105,24 +86,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (email) {
     const cliente = row.clientes?.nombre_comercial ?? ''
     const fecha = row.fecha_tratamiento
-    console.log('[PDF] Enviando email a:', email)
     try {
       await sendEmail({
         to: email,
         subject: `Parte de Trabajo - ${cliente} - ${fecha}`,
         body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${fecha}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
-        pdfUrl: pdf_url,
         pdfBuffer: Buffer.from(buffer),
         pdfFilename: pdfFilename(row),
       })
-      console.log('[PDF] Email enviado correctamente')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[PDF] Error enviando email:', msg)
     }
-  } else {
-    console.log('[PDF] Cliente sin email, no se envía correo')
   }
 
-  return NextResponse.json({ data: updated, pdf_url })
+  return NextResponse.json({ data: updated })
 }
