@@ -67,6 +67,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  console.log('[PDF] Iniciando generación para visita:', id)
+  console.log('[PDF] GOOGLE_DRIVE_FOLDER_ID:', process.env.GOOGLE_DRIVE_FOLDER_ID ?? 'NO DEFINIDO')
+  console.log('[PDF] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'OK' : 'NO DEFINIDO')
+  console.log('[PDF] GOOGLE_REFRESH_TOKEN:', process.env.GOOGLE_REFRESH_TOKEN ? `OK (${process.env.GOOGLE_REFRESH_TOKEN.slice(0, 10)}...)` : 'NO DEFINIDO')
+
   const result = await buildPdf(id)
   if (!result) return NextResponse.json({ error: 'Visita no encontrada' }, { status: 404 })
 
@@ -74,14 +80,29 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const supabase = await createClient()
 
   const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID!
-  const pdfsFolder = await getOrCreateFolder('PDFs', rootId)
-  const { id: fileId, webViewLink } = await uploadToDrive(
-    Buffer.from(buffer),
-    pdfFilename(row),
-    'application/pdf',
-    pdfsFolder,
-  )
-  await makePublic(fileId)
+
+  let fileId: string
+  let webViewLink: string
+
+  try {
+    console.log('[PDF] Buscando/creando carpeta PDFs dentro de:', rootId)
+    const pdfsFolder = await getOrCreateFolder('PDFs', rootId)
+    console.log('[PDF] Carpeta PDFs ID:', pdfsFolder)
+
+    const filename = pdfFilename(row)
+    console.log('[PDF] Subiendo archivo:', filename)
+    const uploaded = await uploadToDrive(Buffer.from(buffer), filename, 'application/pdf', pdfsFolder)
+    fileId = uploaded.id
+    webViewLink = uploaded.webViewLink
+    console.log('[PDF] Archivo subido, fileId:', fileId, 'link:', webViewLink)
+
+    await makePublic(fileId)
+    console.log('[PDF] Archivo publicado')
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[PDF] Error subiendo a Drive:', msg)
+    return NextResponse.json({ error: `Error subiendo a Drive: ${msg}` }, { status: 500 })
+  }
 
   const pdf_url = webViewLink
 
@@ -98,12 +119,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (email) {
     const cliente = row.clientes?.nombre_comercial ?? ''
     const fecha = row.fecha_tratamiento
-    await sendEmail({
-      to: email,
-      subject: `Parte de Trabajo - ${cliente} - ${fecha}`,
-      body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${fecha}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
-      pdfUrl: pdf_url,
-    }).catch(err => console.error('Error enviando email:', err))
+    console.log('[PDF] Enviando email a:', email)
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Parte de Trabajo - ${cliente} - ${fecha}`,
+        body: `Estimado/a cliente,\n\nLe remitimos el parte de trabajo correspondiente al servicio de control de plagas realizado el ${fecha}.\n\nQuedamos a su disposición para cualquier consulta.\n\nAtentamente,\nSACEBA Control de Plagas`,
+        pdfUrl: pdf_url,
+        pdfBuffer: Buffer.from(buffer),
+        pdfFilename: pdfFilename(row),
+      })
+      console.log('[PDF] Email enviado correctamente')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[PDF] Error enviando email:', msg)
+    }
+  } else {
+    console.log('[PDF] Cliente sin email, no se envía correo')
   }
 
   return NextResponse.json({ data: updated, pdf_url })
