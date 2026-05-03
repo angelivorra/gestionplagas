@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Box from '@mui/material/Box'
@@ -26,15 +26,83 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SaveIcon from '@mui/icons-material/Save'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+import DrawIcon from '@mui/icons-material/Draw'
 import EmailIcon from '@mui/icons-material/Email'
 import DownloadIcon from '@mui/icons-material/Download'
 import AddIcon from '@mui/icons-material/Add'
+import SignatureCanvas from 'react-signature-canvas'
 import CreatableCombobox from '@/components/creatable-combobox'
 import ClienteSearchSelect from '@/components/cliente-search-select'
 import FotosGrid from '@/components/fotos-grid'
 import GeolocalizacionBtn from '@/components/geolocalizacion-btn'
-import SignaturePad from '@/components/signature-pad'
 import type { Visita, Producto, ServicioAplicado, ProductoAplicado } from '@/lib/types'
+
+// ── Diálogo de firma a pantalla completa ──────────────────────────────────────
+function FirmaDialog({ open, titulo, onClose, onSave }: {
+  open: boolean
+  titulo: string
+  onClose: () => void
+  onSave: (dataUrl: string) => Promise<void>
+}) {
+  const canvasRef = useRef<SignatureCanvas>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const timer = setTimeout(() => {
+      const canvas = canvasRef.current?.getCanvas()
+      const wrapper = wrapperRef.current
+      if (canvas && wrapper) {
+        canvas.width = wrapper.offsetWidth
+        canvas.height = wrapper.offsetHeight
+      }
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [open])
+
+  async function handleSave() {
+    if (!canvasRef.current || canvasRef.current.isEmpty()) return
+    setSaving(true)
+    await onSave(canvasRef.current.toDataURL('image/png'))
+    setSaving(false)
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} fullScreen>
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar sx={{ gap: 1 }}>
+          <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: 600 }}>{titulo}</Typography>
+          <Button onClick={() => canvasRef.current?.clear()} color="inherit" size="small">Limpiar</Button>
+          <Button onClick={onClose} color="inherit" size="small">Cancelar</Button>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleSave}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </Toolbar>
+      </AppBar>
+      <Box
+        ref={wrapperRef}
+        sx={{ flex: 1, bgcolor: '#fff', touchAction: 'none', cursor: 'crosshair' }}
+      >
+        <SignatureCanvas
+          ref={canvasRef}
+          penColor="#1f2937"
+          canvasProps={{ style: { width: '100%', height: '100%', display: 'block' } }}
+        />
+      </Box>
+      <Box sx={{ p: 2, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="caption" color="text.secondary">Firme en el área de arriba</Typography>
+      </Box>
+    </Dialog>
+  )
+}
 
 interface Props {
   visitaId: string
@@ -243,8 +311,8 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const firmaTecnicoRef = useRef<{ getDataURL: () => string; isEmpty: () => boolean } | null>(null)
-  const firmaClienteRef = useRef<{ getDataURL: () => string; isEmpty: () => boolean } | null>(null)
+  const [firmaDialog, setFirmaDialog] = useState<'tecnico' | 'cliente' | null>(null)
+  const [savingFirma, setSavingFirma] = useState(false)
 
   const update = useCallback((field: string, value: unknown) => {
     setData(prev => ({ ...prev, [field]: value }))
@@ -261,18 +329,9 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
     const payload: Partial<Visita> = { ...data }
     if (nuevoEstado) payload.estado = nuevoEstado
 
-    // Capture signatures from canvas if drawn; otherwise remove from payload
-    // to avoid overwriting existing signatures in DB with null.
-    if (firmaTecnicoRef.current && !firmaTecnicoRef.current.isEmpty()) {
-      payload.firma_tecnico_url = firmaTecnicoRef.current.getDataURL()
-    } else {
-      delete payload.firma_tecnico_url
-    }
-    if (firmaClienteRef.current && !firmaClienteRef.current.isEmpty()) {
-      payload.firma_cliente_url = firmaClienteRef.current.getDataURL()
-    } else {
-      delete payload.firma_cliente_url
-    }
+    // Firmas se gestionan de forma independiente, nunca se incluyen aquí
+    delete payload.firma_tecnico_url
+    delete payload.firma_cliente_url
     delete (payload as Record<string, unknown>).clientes
     delete (payload as Record<string, unknown>).id
     delete (payload as Record<string, unknown>).created_at
@@ -296,6 +355,17 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
         setGeneratingPdf(false)
       }
     }
+  }
+
+  async function saveFirma(dataUrl: string) {
+    const field = firmaDialog === 'tecnico' ? 'firma_tecnico_url' : 'firma_cliente_url'
+    await fetch(`/api/visitas/${visitaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: dataUrl }),
+    })
+    setData(prev => ({ ...prev, [field]: dataUrl }))
+    setFirmaDialog(null)
   }
 
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -410,34 +480,61 @@ export default function VisitaForm({ visitaId, initialData }: Props) {
         <FotosGrid visitaId={visitaId} disabled={cerrado} />
       </Section>
 
-      {!cerrado && (
-        <Section title="Firmas">
-          <SignaturePad ref={firmaTecnicoRef} label="Responsable aplicador" />
-          <TextField label="Nombre del cliente" fullWidth placeholder="Nombre del cliente que firma" value={data.nombre_cliente_firma ?? ''} onChange={e => update('nombre_cliente_firma', e.target.value)} />
-          <SignaturePad ref={firmaClienteRef} label="Firma cliente" />
-        </Section>
-      )}
+      <Section title="Firmas">
+        {/* Técnico */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5 }}>
+          {data.firma_tecnico_url
+            ? <CheckCircleIcon sx={{ color: 'success.main', fontSize: 28, flexShrink: 0 }} />
+            : <RadioButtonUncheckedIcon sx={{ color: 'text.disabled', fontSize: 28, flexShrink: 0 }} />
+          }
+          <Typography sx={{ flex: 1 }}>Técnico aplicador</Typography>
+          {!cerrado && (
+            <Button size="small" variant={data.firma_tecnico_url ? 'outlined' : 'contained'}
+              startIcon={<DrawIcon fontSize="small" />}
+              onClick={() => setFirmaDialog('tecnico')}
+            >
+              {data.firma_tecnico_url ? 'Refirmar' : 'Firmar'}
+            </Button>
+          )}
+        </Box>
 
-      {cerrado && (data.firma_tecnico_url || data.firma_cliente_url) && (
-        <Section title="Firmas">
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-            {data.firma_tecnico_url && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Técnico</Typography>
-                <img src={data.firma_tecnico_url} alt="Firma técnico" style={{ border: '1px solid #e5e7eb', borderRadius: 8, width: '100%' }} />
-              </Box>
+        {/* Cliente */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5 }}>
+          {data.firma_cliente_url
+            ? <CheckCircleIcon sx={{ color: 'success.main', fontSize: 28, flexShrink: 0 }} />
+            : <RadioButtonUncheckedIcon sx={{ color: 'text.disabled', fontSize: 28, flexShrink: 0 }} />
+          }
+          <Box sx={{ flex: 1 }}>
+            <Typography>Cliente</Typography>
+            {!cerrado && (
+              <TextField
+                size="small" fullWidth placeholder="Nombre del cliente que firma"
+                value={data.nombre_cliente_firma ?? ''}
+                onChange={e => update('nombre_cliente_firma', e.target.value)}
+                sx={{ mt: 0.5 }}
+              />
             )}
-            {data.firma_cliente_url && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                  Cliente{data.nombre_cliente_firma ? ` — ${data.nombre_cliente_firma}` : ''}
-                </Typography>
-                <img src={data.firma_cliente_url} alt="Firma cliente" style={{ border: '1px solid #e5e7eb', borderRadius: 8, width: '100%' }} />
-              </Box>
+            {cerrado && data.nombre_cliente_firma && (
+              <Typography variant="caption" color="text.secondary">{data.nombre_cliente_firma}</Typography>
             )}
           </Box>
-        </Section>
-      )}
+          {!cerrado && (
+            <Button size="small" variant={data.firma_cliente_url ? 'outlined' : 'contained'}
+              startIcon={<DrawIcon fontSize="small" />}
+              onClick={() => setFirmaDialog('cliente')}
+            >
+              {data.firma_cliente_url ? 'Refirmar' : 'Firmar'}
+            </Button>
+          )}
+        </Box>
+      </Section>
+
+      <FirmaDialog
+        open={firmaDialog !== null}
+        titulo={firmaDialog === 'tecnico' ? 'Firma del técnico' : 'Firma del cliente'}
+        onClose={() => setFirmaDialog(null)}
+        onSave={saveFirma}
+      />
 
       {/* Barra de acciones fija — encima del bottom nav (64px) */}
       <AppBar
