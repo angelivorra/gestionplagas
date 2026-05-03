@@ -65,7 +65,20 @@ function FirmaDialog({ open, titulo, onClose, onSave }: {
   async function handleSave() {
     if (!canvasRef.current || canvasRef.current.isEmpty()) return
     setSaving(true)
-    await onSave(canvasRef.current.toDataURL('image/png'))
+
+    // Crop to drawn content and add white background so el PDF la renderiza bien
+    const trimmed = canvasRef.current.getTrimmedCanvas()
+    const out = document.createElement('canvas')
+    const pad = 12
+    out.width = trimmed.width + pad * 2
+    out.height = trimmed.height + pad * 2
+    const ctx = out.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, out.width, out.height)
+    ctx.drawImage(trimmed, pad, pad)
+    const dataUrl = out.toDataURL('image/png')
+
+    await onSave(dataUrl)
     setSaving(false)
   }
 
