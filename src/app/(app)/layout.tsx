@@ -9,6 +9,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
+  const allowedEmail = process.env.ALLOWED_EMAIL
+  if (allowedEmail && user.email !== allowedEmail) redirect('/login?error=unauthorized')
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Nav user={user} />

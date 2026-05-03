@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
@@ -9,9 +10,12 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Avatar from '@mui/material/Avatar'
 import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
 
-export default function LoginPage() {
+function LoginCard() {
   const [loading, setLoading] = useState(false)
+  const searchParams = useSearchParams()
+  const error = searchParams.get('error')
 
   async function handleGoogleLogin() {
     setLoading(true)
@@ -45,9 +49,19 @@ export default function LoginPage() {
             S
           </Avatar>
           <Typography variant="h5" gutterBottom>SACEBA</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: error ? 2 : 4 }}>
             Control de Plagas y Aguas
           </Typography>
+          {error === 'unauthorized' && (
+            <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
+              Acceso restringido. Usa la cuenta autorizada.
+            </Alert>
+          )}
+          {error === 'auth' && (
+            <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
+              Error al iniciar sesión. Inténtalo de nuevo.
+            </Alert>
+          )}
           <Button
             variant="contained"
             size="large"
@@ -67,6 +81,14 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </Box>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginCard />
+    </Suspense>
   )
 }
 
