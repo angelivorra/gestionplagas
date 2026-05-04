@@ -10,7 +10,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/login')
 
   const allowedEmails = (process.env.ALLOWED_EMAIL ?? '').split(',').map(e => e.trim()).filter(Boolean)
-  if (allowedEmails.length > 0 && !allowedEmails.includes(user.email ?? '')) redirect('/login?error=unauthorized')
+  if (allowedEmails.length > 0 && !allowedEmails.includes(user.email ?? '')) {
+    await supabase.auth.signOut()
+    redirect('/login?error=unauthorized')
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
