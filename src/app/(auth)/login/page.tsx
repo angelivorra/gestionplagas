@@ -61,7 +61,7 @@ function LoginCard() {
           {error === 'auth' && (
             <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
               Error al iniciar sesión. Inténtalo de nuevo.
-              {msg && <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.8 }}>{msg}</Typography>}
+              {msg && <Typography variant="caption" component="span" sx={{ display: 'block', mt: 0.5, opacity: 0.8 }}>{msg}</Typography>}
             </Alert>
           )}
           <Button
