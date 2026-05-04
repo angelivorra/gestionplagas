@@ -81,7 +81,7 @@ function LoginCard() {
             {loading ? 'Conectando...' : 'Entrar con Google'}
           </Button>
           <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 3 }}>
-            v1.0.0
+            v1.0.1
           </Typography>
         </CardContent>
       </Card>
