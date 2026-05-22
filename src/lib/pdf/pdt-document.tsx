@@ -174,11 +174,10 @@ export default function PDTDocument({ visita, cliente, productosMap, partNum }: 
           <View>
             <Text style={s.logo}>SACEBA</Text>
             <Text style={s.logoTagline}>Control de Plagas</Text>
-            <Text style={s.logoInfo}>Carmen Cerezuela Bastida</Text>
-            <Text style={s.logoInfo}>NIF: 17470907S</Text>
-            <Text style={s.logoInfo}>Tel: 608 285 800</Text>
-            <Text style={s.logoInfo}>sacebacontrol@gmail.com</Text>
-            <Text style={s.logoInfo}>ROESB: XXXX-MUR-TXX</Text>
+            <Text style={s.logoInfo}>Carmen Cerezuela Bastida · NIF: 17470907S</Text>
+            <Text style={s.logoInfo}>Calle Polavieja, 48, 30364, Portmán, La Unión, Murcia</Text>
+            <Text style={s.logoInfo}>Tel: 608 285 800 · sacebacontrol@gmail.com</Text>
+            <Text style={s.logoInfo}>N° ROESB: 1516-MUR-T26</Text>
           </View>
           <View style={s.titleBlock}>
             <Text style={s.docTitle}>PARTE DE TRABAJO</Text>

@@ -16,7 +16,11 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
       "Bash(awk '{print $NF}')",
       "Bash(grep -v \"^ui$\")",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(which nvm *)",
+      "Read(//home/angel/**)",
+      "Bash(curl -fsSL https://fnm.vercel.app/install)",
+      "Bash(bash)"
     ]
   }
 }
