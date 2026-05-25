@@ -33,6 +33,7 @@ export async function generarContrato(cliente: {
 
   const { data: copia } = await drive.files.copy({
     fileId: TEMPLATE_ID,
+    supportsAllDrives: true,
     requestBody: {
       name: `Contrato - ${cliente.nombre_comercial}`,
       parents: [CONTRATOS_FOLDER_ID],
