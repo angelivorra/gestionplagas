@@ -31,17 +31,22 @@ export async function generarContrato(cliente: {
   const drive = google.drive({ version: 'v3', auth })
   const docs = google.docs({ version: 'v1', auth })
 
+  // Copiar a raíz primero, luego mover a la carpeta destino
   const { data: copia } = await drive.files.copy({
     fileId: TEMPLATE_ID,
-    supportsAllDrives: true,
-    requestBody: {
-      name: `Contrato - ${cliente.nombre_comercial}`,
-      parents: [CONTRATOS_FOLDER_ID],
-    },
-    fields: 'id',
+    requestBody: { name: `Contrato - ${cliente.nombre_comercial}` },
+    fields: 'id, parents',
   })
 
   const docId = copia.id!
+  const parentesActuales = (copia.parents ?? []).join(',')
+
+  await drive.files.update({
+    fileId: docId,
+    addParents: CONTRATOS_FOLDER_ID,
+    removeParents: parentesActuales,
+    fields: 'id',
+  })
 
   const variables: Record<string, string> = {
     '{{RAZON_SOCIAL}}': cliente.nombre_comercial,
