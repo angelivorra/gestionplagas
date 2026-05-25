@@ -219,7 +219,7 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
           disabled={generandoContrato}
           startIcon={<DescriptionIcon />}
         >
-          {generandoContrato ? 'Generando...' : 'Generar contrato'}
+          {generandoContrato ? 'Generando...' : contratoUrl ? 'Regenerar contrato' : 'Generar contrato'}
         </Button>
         {contratoUrl && (
           <Button

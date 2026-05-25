@@ -34,7 +34,7 @@ export async function generarContrato(cliente: {
   // Copiar a raíz primero, luego mover a la carpeta destino
   const { data: copia } = await drive.files.copy({
     fileId: TEMPLATE_ID,
-    requestBody: { name: `Contrato - ${cliente.nombre_comercial}` },
+    requestBody: { name: cliente.nombre_comercial },
     fields: 'id, parents',
   })
 
@@ -74,4 +74,9 @@ export async function generarContrato(cliente: {
   })
 
   return { docId, url: `https://docs.google.com/document/d/${docId}/edit` }
+}
+
+export async function eliminarDocumento(docId: string): Promise<void> {
+  const drive = google.drive({ version: 'v3', auth: getOAuth2Client() })
+  await drive.files.delete({ fileId: docId })
 }

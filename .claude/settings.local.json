@@ -27,7 +27,8 @@
       "Bash(git push *)",
       "Bash(ssh -T git@github.com)",
       "Bash(git remote *)",
-      "Bash(git commit -m 'Fix: reemplazar InputLabelProps por slotProps en campos fecha *)"
+      "Bash(git commit -m 'Fix: reemplazar InputLabelProps por slotProps en campos fecha *)",
+      "Bash(git commit -m 'Fix: añadir supportsAllDrives para carpetas compartidas de Drive *)"
     ]
   }
 }
