@@ -97,7 +97,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
               type="date"
               label="Inicio contrato"
               fullWidth
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               value={form.fecha_inicio_contrato}
               onChange={e => update('fecha_inicio_contrato', e.target.value)}
             />
@@ -105,7 +105,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
               type="date"
               label="Vencimiento contrato"
               fullWidth
-              InputLabelProps={{ shrink: true }}
+              slotProps={{ inputLabel: { shrink: true } }}
               value={form.fecha_vencimiento_contrato}
               onChange={e => update('fecha_vencimiento_contrato', e.target.value)}
             />
