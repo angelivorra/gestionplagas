@@ -24,6 +24,12 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
     direccion: cliente?.direccion ?? '',
     correo_electronico: cliente?.correo_electronico ?? '',
     observaciones: cliente?.observaciones ?? '',
+    fecha_inicio_contrato: cliente?.fecha_inicio_contrato ?? '',
+    fecha_vencimiento_contrato: cliente?.fecha_vencimiento_contrato ?? '',
+    importe_contrato: cliente?.importe_contrato?.toString() ?? '',
+    importe_actuacion_requerimiento: cliente?.importe_actuacion_requerimiento?.toString() ?? '',
+    actuacion_texto: cliente?.actuacion_texto ?? '',
+    importe_traslado: cliente?.importe_traslado?.toString() ?? '',
   })
 
   function update(field: string, value: string) {
@@ -79,6 +85,66 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
             value={form.observaciones}
             onChange={e => update('observaciones', e.target.value)}
             placeholder="Notas sobre el cliente, acceso al local..."
+          />
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '20px !important' }}>
+          <Typography variant="subtitle2" color="text.secondary">Contrato</Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              type="date"
+              label="Inicio contrato"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={form.fecha_inicio_contrato}
+              onChange={e => update('fecha_inicio_contrato', e.target.value)}
+            />
+            <TextField
+              type="date"
+              label="Vencimiento contrato"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={form.fecha_vencimiento_contrato}
+              onChange={e => update('fecha_vencimiento_contrato', e.target.value)}
+            />
+          </Box>
+          <TextField
+            type="number"
+            label="Importe contrato (€)"
+            fullWidth
+            inputProps={{ min: 0, step: '0.01' }}
+            value={form.importe_contrato}
+            onChange={e => update('importe_contrato', e.target.value)}
+            placeholder="0.00"
+          />
+          <TextField
+            type="number"
+            label="Importe actuación requerimiento (€)"
+            fullWidth
+            inputProps={{ min: 0, step: '0.01' }}
+            value={form.importe_actuacion_requerimiento}
+            onChange={e => update('importe_actuacion_requerimiento', e.target.value)}
+            placeholder="0.00"
+          />
+          <TextField
+            label="Actuación (texto libre)"
+            fullWidth
+            multiline
+            rows={2}
+            value={form.actuacion_texto}
+            onChange={e => update('actuacion_texto', e.target.value)}
+            placeholder="Descripción de la actuación contratada..."
+          />
+          <TextField
+            type="number"
+            label="Importe traslado (€)"
+            fullWidth
+            inputProps={{ min: 0, step: '0.01' }}
+            value={form.importe_traslado}
+            onChange={e => update('importe_traslado', e.target.value)}
+            placeholder="0.00"
           />
         </CardContent>
       </Card>

@@ -27,6 +27,8 @@ import LocationOnIcon from '@mui/icons-material/LocationOn'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import BadgeIcon from '@mui/icons-material/Badge'
 import PersonIcon from '@mui/icons-material/Person'
+import EuroIcon from '@mui/icons-material/Euro'
+import ArticleIcon from '@mui/icons-material/Article'
 import type { Cliente } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
@@ -122,6 +124,70 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
           )}
         </CardContent>
       </Card>
+
+      {(cliente.fecha_inicio_contrato || cliente.fecha_vencimiento_contrato || cliente.importe_contrato != null ||
+        cliente.importe_actuacion_requerimiento != null || cliente.actuacion_texto || cliente.importe_traslado != null) && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Typography variant="overline" color="text.secondary">Contrato</Typography>
+            {(cliente.fecha_inicio_contrato || cliente.fecha_vencimiento_contrato) && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <ArticleIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                <Box>
+                  {cliente.fecha_inicio_contrato && (
+                    <Box>
+                      <Typography variant="caption" color="text.disabled">Inicio</Typography>
+                      <Typography variant="body2">{formatDate(cliente.fecha_inicio_contrato)}</Typography>
+                    </Box>
+                  )}
+                  {cliente.fecha_vencimiento_contrato && (
+                    <Box sx={{ mt: 0.5 }}>
+                      <Typography variant="caption" color="text.disabled">Vencimiento</Typography>
+                      <Typography variant="body2">{formatDate(cliente.fecha_vencimiento_contrato)}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+            {cliente.importe_contrato != null && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EuroIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                <Box>
+                  <Typography variant="caption" color="text.disabled">Importe contrato</Typography>
+                  <Typography variant="body2">{cliente.importe_contrato.toFixed(2)} €</Typography>
+                </Box>
+              </Box>
+            )}
+            {cliente.importe_actuacion_requerimiento != null && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EuroIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                <Box>
+                  <Typography variant="caption" color="text.disabled">Actuación requerimiento</Typography>
+                  <Typography variant="body2">{cliente.importe_actuacion_requerimiento.toFixed(2)} €</Typography>
+                </Box>
+              </Box>
+            )}
+            {cliente.importe_traslado != null && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EuroIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                <Box>
+                  <Typography variant="caption" color="text.disabled">Traslado</Typography>
+                  <Typography variant="body2">{cliente.importe_traslado.toFixed(2)} €</Typography>
+                </Box>
+              </Box>
+            )}
+            {cliente.actuacion_texto && (
+              <>
+                <Divider />
+                <Box>
+                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 0.5 }}>Actuación</Typography>
+                  <Typography variant="body2">{cliente.actuacion_texto}</Typography>
+                </Box>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Nueva visita */}
       <Button

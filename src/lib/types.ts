@@ -7,6 +7,12 @@ export type Cliente = {
   correo_electronico: string | null
   plano_url: string | null
   observaciones: string | null
+  fecha_inicio_contrato: string | null
+  fecha_vencimiento_contrato: string | null
+  importe_contrato: number | null
+  importe_actuacion_requerimiento: number | null
+  actuacion_texto: string | null
+  importe_traslado: number | null
   created_at: string
 }
 
