@@ -114,7 +114,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
             type="number"
             label="Importe contrato (€)"
             fullWidth
-            inputProps={{ min: 0, step: '0.01' }}
+            slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
             value={form.importe_contrato}
             onChange={e => update('importe_contrato', e.target.value)}
             placeholder="0.00"
@@ -123,7 +123,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
             type="number"
             label="Importe actuación requerimiento (€)"
             fullWidth
-            inputProps={{ min: 0, step: '0.01' }}
+            slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
             value={form.importe_actuacion_requerimiento}
             onChange={e => update('importe_actuacion_requerimiento', e.target.value)}
             placeholder="0.00"
@@ -141,7 +141,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
             type="number"
             label="Importe traslado (€)"
             fullWidth
-            inputProps={{ min: 0, step: '0.01' }}
+            slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
             value={form.importe_traslado}
             onChange={e => update('importe_traslado', e.target.value)}
             placeholder="0.00"
