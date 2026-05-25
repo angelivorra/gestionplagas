@@ -20,7 +20,14 @@
       "Bash(which nvm *)",
       "Read(//home/angel/**)",
       "Bash(curl -fsSL https://fnm.vercel.app/install)",
-      "Bash(bash)"
+      "Bash(bash)",
+      "Bash(supabase --version)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git remote *)",
+      "Bash(git commit -m 'Fix: reemplazar InputLabelProps por slotProps en campos fecha *)"
     ]
   }
 }

@@ -13,6 +13,7 @@ export type Cliente = {
   importe_actuacion_requerimiento: number | null
   actuacion_texto: string | null
   importe_traslado: number | null
+  contrato_url: string | null
   created_at: string
 }
 

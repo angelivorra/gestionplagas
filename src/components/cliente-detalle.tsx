@@ -29,6 +29,8 @@ import BadgeIcon from '@mui/icons-material/Badge'
 import PersonIcon from '@mui/icons-material/Person'
 import EuroIcon from '@mui/icons-material/Euro'
 import ArticleIcon from '@mui/icons-material/Article'
+import DescriptionIcon from '@mui/icons-material/Description'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import type { Cliente } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
@@ -38,11 +40,29 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
   const router = useRouter()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [creando, setCreando] = useState(false)
+  const [generandoContrato, setGenerandoContrato] = useState(false)
+  const [contratoUrl, setContratoUrl] = useState(cliente.contrato_url ?? null)
 
   async function handleDelete() {
     await fetch(`/api/clientes/${cliente.id}`, { method: 'DELETE' })
     router.push('/clientes')
     router.refresh()
+  }
+
+  async function handleGenerarContrato() {
+    if (generandoContrato) return
+    setGenerandoContrato(true)
+    const res = await fetch('/api/contratos/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clienteId: cliente.id }),
+    })
+    const { data } = await res.json()
+    if (data?.url) {
+      setContratoUrl(data.url)
+      window.open(data.url, '_blank')
+    }
+    setGenerandoContrato(false)
   }
 
   async function handleNuevaVisita() {
@@ -188,6 +208,33 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
           </CardContent>
         </Card>
       )}
+
+      {/* Contrato */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Button
+          variant="outlined"
+          fullWidth
+          size="large"
+          onClick={handleGenerarContrato}
+          disabled={generandoContrato}
+          startIcon={<DescriptionIcon />}
+        >
+          {generandoContrato ? 'Generando...' : 'Generar contrato'}
+        </Button>
+        {contratoUrl && (
+          <Button
+            variant="outlined"
+            size="large"
+            component="a"
+            href={contratoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ minWidth: 0, px: 2 }}
+          >
+            <OpenInNewIcon fontSize="small" />
+          </Button>
+        )}
+      </Box>
 
       {/* Nueva visita */}
       <Button
