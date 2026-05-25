@@ -12,11 +12,13 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
+import Alert from '@mui/material/Alert'
 import type { Cliente } from '@/lib/types'
 
 export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [form, setForm] = useState({
     nombre_comercial: cliente?.nombre_comercial ?? '',
     nombre: cliente?.nombre ?? '',
@@ -43,11 +45,14 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
     payload.nombre_comercial = form.nombre_comercial
 
     if (cliente) {
-      await fetch(`/api/clientes/${cliente.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const res = await fetch(`/api/clientes/${cliente.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const result = await res.json()
+      if (result.error) { setSaveError(result.error); setSaving(false); return }
       router.push(`/clientes/${cliente.id}`)
     } else {
       const res = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const { data } = await res.json()
+      const { data, error } = await res.json()
+      if (error) { setSaveError(error); setSaving(false); return }
       if (data) router.push(`/clientes/${data.id}`)
     }
     router.refresh()
@@ -62,6 +67,8 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
         </IconButton>
         <Typography variant="h6">{cliente ? 'Editar cliente' : 'Nuevo cliente'}</Typography>
       </Box>
+
+      {saveError && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setSaveError(null)}>{saveError}</Alert>}
 
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '20px !important' }}>
