@@ -233,9 +233,9 @@ export default function PDTDocument({ visita, cliente, productosMap, partNum }: 
                 <View style={{ marginBottom: lugares.length > 0 ? 8 : 0 }}>
                   <View style={s.tableHead}>
                     <Text style={[s.tableHeadCell, { flex: 2 }]}>Producto</Text>
-                    <Text style={[s.tableHeadCell, { flex: 1.2 }]}>Nº Registro</Text>
-                    <Text style={[s.tableHeadCell, { flex: 0.8, textAlign: 'right' }]}>Cantidad</Text>
-                    <Text style={[s.tableHeadCell, { flex: 1.2, textAlign: 'right' }]}>Plazo seguridad</Text>
+                    <Text style={[s.tableHeadCell, { flex: 1.8 }]}>Nº Registro Sanitario</Text>
+                    <Text style={[s.tableHeadCell, { flex: 0.6, textAlign: 'right' }]}>Cantidad</Text>
+                    <Text style={[s.tableHeadCell, { flex: 0.8, textAlign: 'right' }]}>Plazo seguridad</Text>
                   </View>
                   {servicio.productos.filter(pa => pa.producto_id).map((pa, pi) => {
                     const prod = productosMap[pa.producto_id]
@@ -244,9 +244,9 @@ export default function PDTDocument({ visita, cliente, productosMap, partNum }: 
                       <View key={pi}>
                         <View style={s.tableRow}>
                           <Text style={[s.tableCell, { flex: 2 }]}>{prod?.nombre_comercial ?? '—'}</Text>
-                          <Text style={[s.tableCell, { flex: 1.2 }]}>{prod?.numero_registro ?? '—'}</Text>
-                          <Text style={[s.tableCell, { flex: 0.8, textAlign: 'right' }]}>{pa.cantidad || '—'}</Text>
-                          <Text style={[s.tableCell, { flex: 1.2, textAlign: 'right' }]}>{pa.plazo_seguridad || (prod?.plazo_seguridad ? `${prod.plazo_seguridad} h` : '—')}</Text>
+                          <Text style={[s.tableCell, { flex: 1.8 }]}>{prod?.numero_registro ?? '—'}</Text>
+                          <Text style={[s.tableCell, { flex: 0.6, textAlign: 'right' }]}>{pa.cantidad || '—'}</Text>
+                          <Text style={[s.tableCell, { flex: 0.8, textAlign: 'right' }]}>{pa.plazo_seguridad || (prod?.plazo_seguridad ? `${prod.plazo_seguridad} h` : '—')}</Text>
                         </View>
                         {lugaresProducto.length > 0 && (
                           <View style={[s.chipsWrap, { paddingHorizontal: 8, paddingBottom: 4 }]}>
