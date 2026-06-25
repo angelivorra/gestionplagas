@@ -1,66 +1,80 @@
 import { NextResponse } from 'next/server'
 import { google } from 'googleapis'
+import { createClient } from '@supabase/supabase-js'
 import { getOAuth2Client } from '@/lib/google/auth'
 
-// TEMPORAL: diagnóstico de la cuenta de Google y acceso a plantilla/carpeta.
-// Borrar tras depurar.
+// TEMPORAL: diagnóstico. Borrar tras depurar.
 export async function GET(request: Request) {
   const auth = getOAuth2Client()
   const drive = google.drive({ version: 'v3', auth })
+  const params = new URL(request.url).searchParams
 
   const out: Record<string, unknown> = {}
 
   try {
-    const { data } = await drive.about.get({ fields: 'user(emailAddress,displayName)' })
+    const { data } = await drive.about.get({ fields: 'user(emailAddress)' })
     out.cuenta = data.user?.emailAddress ?? null
   } catch (e) {
     out.cuenta = `ERROR: ${e instanceof Error ? e.message : e}`
   }
 
+  function textoCelda(cell: { content?: { paragraph?: { elements?: { textRun?: { content?: string } }[] } }[] }): string {
+    let s = ''
+    for (const c of cell.content ?? [])
+      for (const e of c.paragraph?.elements ?? []) s += e.textRun?.content ?? ''
+    return s.replace(/\s+/g, ' ').trim()
+  }
+
+  // ── Estructura de las tablas de un documento ──
+  const idDoc = params.get('id')
+  if (idDoc) {
+    try {
+      const docs = google.docs({ version: 'v1', auth })
+      const { data: doc } = await docs.documents.get({ documentId: idDoc })
+      const tablas: unknown[] = []
+      for (const el of doc.body?.content ?? []) {
+        if (!el.table) continue
+        const filas = el.table.tableRows ?? []
+        tablas.push({
+          startIndex: el.startIndex,
+          filas: filas.length,
+          contenido: filas.map(r => (r.tableCells ?? []).map(c => textoCelda(c))),
+        })
+      }
+      out.tablas = tablas
+    } catch (e) {
+      out.tablas = `ERROR: ${e instanceof Error ? e.message : e}`
+    }
+  }
+
+  // ── Datos del cliente vía service role (sin RLS) ──
+  const supa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const idCliente = params.get('cliente')
+  if (idCliente) {
+    const { data } = await supa.from('clientes').select('nombre_comercial, productos_certificado, certificado_url').eq('id', idCliente).single()
+    out.cliente = data
+  }
+  if (params.has('clientes')) {
+    const { data } = await supa.from('clientes').select('id, nombre_comercial, productos_certificado')
+    out.clientes = (data ?? []).map(c => ({
+      id: c.id,
+      nombre: c.nombre_comercial,
+      nProductos: (c.productos_certificado ?? []).length,
+    }))
+  }
+
+  out.plantilla_certificado = await check(process.env.CERTIFICADO_TEMPLATE_ID)
+  out.carpeta_certificados = await check(process.env.CERTIFICADOS_FOLDER_ID)
+
   async function check(id: string | undefined) {
     if (!id) return 'SIN_ID'
     try {
-      const { data } = await drive.files.get({ fileId: id, fields: 'id,name,owners(emailAddress)', supportsAllDrives: true })
+      const { data } = await drive.files.get({ fileId: id, fields: 'name,owners(emailAddress)', supportsAllDrives: true })
       return { name: data.name, owners: data.owners?.map(o => o.emailAddress) }
     } catch (e) {
       return `ERROR: ${e instanceof Error ? e.message : e}`
     }
   }
-
-  const idConsulta = new URL(request.url).searchParams.get('id')
-  if (idConsulta) {
-    out.consulta = await check(idConsulta)
-    try {
-      const docs = google.docs({ version: 'v1', auth })
-      const { data: doc } = await docs.documents.get({ documentId: idConsulta })
-      let texto = ''
-      let tablaProductos = false
-      const walk = (els: unknown[] | undefined) => {
-        for (const el of (els ?? []) as Array<{ paragraph?: { elements?: { textRun?: { content?: string } }[] }; table?: { tableRows?: { tableCells?: { content?: unknown[] }[] }[] } }>) {
-          for (const pe of el.paragraph?.elements ?? []) texto += pe.textRun?.content ?? ''
-          if (el.table) {
-            const first = el.table.tableRows?.[0]?.tableCells?.[0]
-            walk(first?.content)
-            if (texto.includes('Producto Utilizado')) tablaProductos = true
-            for (const row of el.table.tableRows ?? [])
-              for (const cell of row.tableCells ?? []) walk(cell.content)
-          }
-        }
-      }
-      walk(doc.body?.content)
-      out.contenido = {
-        marcadores: [...new Set(texto.match(/\{\{[^}]*\}\}/g) ?? [])],
-        tieneTablaProductos: tablaProductos,
-      }
-    } catch (e) {
-      out.contenido = `ERROR: ${e instanceof Error ? e.message : e}`
-    }
-  }
-
-  out.plantilla_certificado = await check(process.env.CERTIFICADO_TEMPLATE_ID)
-  out.carpeta_certificados = await check(process.env.CERTIFICADOS_FOLDER_ID)
-  out.plantilla_contrato = await check(process.env.CONTRATO_TEMPLATE_ID)
-  out.carpeta_contratos = await check(process.env.CONTRATOS_FOLDER_ID)
 
   return NextResponse.json(out)
 }
