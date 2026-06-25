@@ -268,7 +268,7 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
                     <Typography variant="body2" sx={{ mt: 0.25 }}>
                       {p.cantidad && <>Cantidad: {p.cantidad}</>}
                       {p.cantidad && p.vector_diana && ' · '}
-                      {p.vector_diana && <>Vector diana: {p.vector_diana}</>}
+                      {p.vector_diana && <Box component="span" sx={{ fontStyle: 'italic' }}>Vector diana: {p.vector_diana}</Box>}
                     </Typography>
                   </Box>
                 </Box>
