@@ -167,14 +167,26 @@ function textoCelda(cell: docs_v1.Schema$TableCell | undefined): string {
   return s
 }
 
-function localizarTablaProductos(doc: docs_v1.Schema$Document) {
-  for (const el of doc.body?.content ?? []) {
+// Busca la tabla de productos, incluso si está anidada dentro de otra tabla
+// (la plantilla envuelve todo en una tabla-marco de una sola celda).
+function buscarTabla(elements: docs_v1.Schema$StructuralElement[] | undefined): { startIndex: number; filas: docs_v1.Schema$TableRow[] } | null {
+  for (const el of elements ?? []) {
     const filas = el.table?.tableRows
-    if (filas && textoCelda(filas[0]?.tableCells?.[0]).includes('Producto Utilizado')) {
+    if (!filas) continue
+    if (textoCelda(filas[0]?.tableCells?.[0]).includes('Producto Utilizado')) {
       return { startIndex: el.startIndex!, filas }
     }
+    for (const row of filas)
+      for (const cell of row.tableCells ?? []) {
+        const found = buscarTabla(cell.content)
+        if (found) return found
+      }
   }
   return null
+}
+
+function localizarTablaProductos(doc: docs_v1.Schema$Document) {
+  return buscarTabla(doc.body?.content)
 }
 
 // Rellena la tabla "Diagnosis y Productos Aplicados": una fila por producto.
