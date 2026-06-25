@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { google } from 'googleapis'
+import { google, type docs_v1 } from 'googleapis'
 import { createClient } from '@supabase/supabase-js'
 import { getOAuth2Client } from '@/lib/google/auth'
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     out.cuenta = `ERROR: ${e instanceof Error ? e.message : e}`
   }
 
-  function textoCelda(cell: { content?: { paragraph?: { elements?: { textRun?: { content?: string } }[] } }[] }): string {
+  function textoCelda(cell: docs_v1.Schema$TableCell): string {
     let s = ''
     for (const c of cell.content ?? [])
       for (const e of c.paragraph?.elements ?? []) s += e.textRun?.content ?? ''
