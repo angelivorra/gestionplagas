@@ -22,6 +22,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import EventRepeatIcon from '@mui/icons-material/EventRepeat'
 import EmailIcon from '@mui/icons-material/Email'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -30,6 +31,7 @@ import PersonIcon from '@mui/icons-material/Person'
 import EuroIcon from '@mui/icons-material/Euro'
 import ArticleIcon from '@mui/icons-material/Article'
 import DescriptionIcon from '@mui/icons-material/Description'
+import VerifiedIcon from '@mui/icons-material/Verified'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import type { Cliente } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
@@ -42,6 +44,8 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
   const [creando, setCreando] = useState(false)
   const [generandoContrato, setGenerandoContrato] = useState(false)
   const [contratoUrl, setContratoUrl] = useState(cliente.contrato_url ?? null)
+  const [generandoCertificado, setGenerandoCertificado] = useState(false)
+  const [certificadoUrl, setCertificadoUrl] = useState(cliente.certificado_url ?? null)
 
   async function handleDelete() {
     await fetch(`/api/clientes/${cliente.id}`, { method: 'DELETE' })
@@ -63,6 +67,22 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
       window.open(data.url, '_blank')
     }
     setGenerandoContrato(false)
+  }
+
+  async function handleGenerarCertificado() {
+    if (generandoCertificado) return
+    setGenerandoCertificado(true)
+    const res = await fetch('/api/certificados/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clienteId: cliente.id }),
+    })
+    const { data } = await res.json()
+    if (data?.url) {
+      setCertificadoUrl(data.url)
+      window.open(data.url, '_blank')
+    }
+    setGenerandoCertificado(false)
   }
 
   async function handleNuevaVisita() {
@@ -145,7 +165,7 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
         </CardContent>
       </Card>
 
-      {(cliente.fecha_inicio_contrato || cliente.fecha_vencimiento_contrato || cliente.importe_contrato != null ||
+      {(cliente.fecha_inicio_contrato || cliente.fecha_vencimiento_contrato || cliente.periodicidad || cliente.importe_contrato != null ||
         cliente.importe_actuacion_requerimiento != null || cliente.actuacion_texto || cliente.importe_traslado != null) && (
         <Card sx={{ mb: 2 }}>
           <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -166,6 +186,15 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
                       <Typography variant="body2">{formatDate(cliente.fecha_vencimiento_contrato)}</Typography>
                     </Box>
                   )}
+                </Box>
+              </Box>
+            )}
+            {cliente.periodicidad && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EventRepeatIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+                <Box>
+                  <Typography variant="caption" color="text.disabled">Periodicidad</Typography>
+                  <Typography variant="body2">{cliente.periodicidad}</Typography>
                 </Box>
               </Box>
             )}
@@ -227,6 +256,33 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
             size="large"
             component="a"
             href={contratoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{ minWidth: 0, px: 2 }}
+          >
+            <OpenInNewIcon fontSize="small" />
+          </Button>
+        )}
+      </Box>
+
+      {/* Certificado de tratamiento */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Button
+          variant="outlined"
+          fullWidth
+          size="large"
+          onClick={handleGenerarCertificado}
+          disabled={generandoCertificado}
+          startIcon={<VerifiedIcon />}
+        >
+          {generandoCertificado ? 'Generando...' : certificadoUrl ? 'Regenerar certificado' : 'Generar certificado'}
+        </Button>
+        {certificadoUrl && (
+          <Button
+            variant="outlined"
+            size="large"
+            component="a"
+            href={certificadoUrl}
             target="_blank"
             rel="noopener noreferrer"
             sx={{ minWidth: 0, px: 2 }}

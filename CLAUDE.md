@@ -3,44 +3,71 @@
 App web para empresa de control de plagas. Gestiona visitas (PDTs), clientes y productos.
 
 ## Stack
-- **Next.js 14** App Router + TypeScript
+- **Next.js 16** App Router + TypeScript + React 19
 - **Supabase**: PostgreSQL + Auth (Google OAuth) + Storage
-- **Tailwind CSS** + **shadcn/ui**
+- **MUI (@mui/material)** + Emotion (no Tailwind/shadcn)
 - **@react-pdf/renderer** (generación PDF)
 - **react-signature-canvas** (firmas)
+- **googleapis**: Google Docs / Drive / Gmail (contratos y envío)
 - Hosting: **Vercel** (gratuito)
 
 ## Comandos
 ```bash
 npm run dev       # desarrollo (http://localhost:3000)
 npm run build     # build producción
-npm run lint      # linting
+npm run start     # servir build de producción
 ```
 
 ## Variables de entorno (.env.local)
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+GOOGLE_CLIENT_ID=          # OAuth + Google APIs (Docs/Drive/Gmail)
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REFRESH_TOKEN=
+ALLOWED_EMAIL=             # email autorizado para entrar
+CONTRATO_TEMPLATE_ID=      # Google Doc plantilla de contrato
+CONTRATOS_FOLDER_ID=       # carpeta Drive destino de contratos
+CERTIFICADO_TEMPLATE_ID=   # Google Doc plantilla de certificado
+CERTIFICADOS_FOLDER_ID=    # carpeta Drive destino de certificados
 ```
 
 ## Estructura clave
 ```
-src/app/
-  (auth)/login/          ← Login Google
-  (app)/
-    visitas/             ← PANTALLA PRINCIPAL: gestor visitas
-    visitas/[id]/        ← Ficha visita / formulario PDT
-    clientes/            ← CRUD clientes
-    productos/           ← CRUD productos
-src/components/
-  CreatableCombobox      ← Dropdown con opción "crear nuevo" (guarda en opciones_lista)
-  SignatureCanvas        ← Firma táctil (react-signature-canvas)
-  GeolocalizacionBtn     ← navigator.geolocation → guarda lat/lon
-  FotosGrid              ← Subida fotos cámara → Supabase Storage
-src/lib/
-  supabase/              ← cliente Supabase (browser + server)
-  pdf/                   ← PDFDocument con @react-pdf/renderer
+src/
+  app/
+    (auth)/login/            ← Login Google OAuth
+    (app)/                   ← Zona autenticada (layout con nav)
+      visitas/               ← PANTALLA PRINCIPAL: gestor de visitas (PDTs)
+        nueva/               ← Alta de visita
+        [id]/                ← Ficha / formulario PDT
+      clientes/              ← CRUD clientes (lista, nuevo, [id], [id]/editar)
+      productos/             ← CRUD productos (lista, [id])
+      ajustes/               ← Ajustes de la app
+    api/                     ← API routes ({ data, error })
+      auth/callback/         ← Callback OAuth
+      visitas/               ← CRUD visitas + [id]/fotos
+      clientes/              ← CRUD clientes
+      productos/             ← CRUD productos + [id]/fichas
+      opciones/[tabla]/      ← Alta de valores en tablas auxiliares dinámicas
+      contratos/generar/     ← Genera contrato (Google Docs) → Drive
+      pdf/[id]/              ← Genera/sirve PDF de la visita
+      email/[id]/            ← Envío de email (Gmail)
+  components/                ← Componentes cliente
+    visita-form              ← Formulario PDT (núcleo)
+    creatable-combobox       ← Dropdown con "crear nuevo" (→ opciones_lista)
+    signature-pad            ← Firma táctil (react-signature-canvas)
+    geolocalizacion-btn      ← navigator.geolocation → lat/lon
+    fotos-grid               ← Subida fotos cámara → Supabase Storage
+    cliente-*/producto-*/visitas-list/nav/page-container/theme-registry
+  lib/
+    supabase/                ← cliente Supabase (client.ts browser + server.ts)
+    pdf/pdt-document.tsx     ← Documento PDF del parte (PDT)
+    google/                  ← auth, docs, drive, gmail (googleapis)
+    types.ts, utils.ts
+  proxy.ts                   ← Middleware/proxy
+supabase/schema.sql          ← Esquema de base de datos
+scripts/                     ← gen_parte.py, get-google-token / get-refresh-token (mjs)
 ```
 
 ## Base de datos (tablas principales)

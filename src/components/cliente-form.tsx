@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
+import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Card from '@mui/material/Card'
@@ -28,6 +29,7 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
     observaciones: cliente?.observaciones ?? '',
     fecha_inicio_contrato: cliente?.fecha_inicio_contrato ?? '',
     fecha_vencimiento_contrato: cliente?.fecha_vencimiento_contrato ?? '',
+    periodicidad: cliente?.periodicidad ?? '',
     importe_contrato: cliente?.importe_contrato?.toString() ?? '',
     importe_actuacion_requerimiento: cliente?.importe_actuacion_requerimiento?.toString() ?? '',
     actuacion_texto: cliente?.actuacion_texto ?? '',
@@ -117,6 +119,20 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
               onChange={e => update('fecha_vencimiento_contrato', e.target.value)}
             />
           </Box>
+          <TextField
+            select
+            label="Periodicidad"
+            fullWidth
+            value={form.periodicidad}
+            onChange={e => update('periodicidad', e.target.value)}
+          >
+            <MenuItem value="">Sin especificar</MenuItem>
+            <MenuItem value="Semestral">Semestral</MenuItem>
+            <MenuItem value="Cuatrimestral">Cuatrimestral</MenuItem>
+            <MenuItem value="Trimestral">Trimestral</MenuItem>
+            <MenuItem value="Bimestral">Bimestral</MenuItem>
+            <MenuItem value="Mensual">Mensual</MenuItem>
+          </TextField>
           <TextField
             type="number"
             label="Importe contrato (€)"

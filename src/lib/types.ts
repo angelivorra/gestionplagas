@@ -9,11 +9,13 @@ export type Cliente = {
   observaciones: string | null
   fecha_inicio_contrato: string | null
   fecha_vencimiento_contrato: string | null
+  periodicidad: string | null
   importe_contrato: number | null
   importe_actuacion_requerimiento: number | null
   actuacion_texto: string | null
   importe_traslado: number | null
   contrato_url: string | null
+  certificado_url: string | null
   created_at: string
 }
 
