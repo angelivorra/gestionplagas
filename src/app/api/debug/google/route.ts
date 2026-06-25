@@ -28,7 +28,34 @@ export async function GET(request: Request) {
   }
 
   const idConsulta = new URL(request.url).searchParams.get('id')
-  if (idConsulta) out.consulta = await check(idConsulta)
+  if (idConsulta) {
+    out.consulta = await check(idConsulta)
+    try {
+      const docs = google.docs({ version: 'v1', auth })
+      const { data: doc } = await docs.documents.get({ documentId: idConsulta })
+      let texto = ''
+      let tablaProductos = false
+      const walk = (els: unknown[] | undefined) => {
+        for (const el of (els ?? []) as Array<{ paragraph?: { elements?: { textRun?: { content?: string } }[] }; table?: { tableRows?: { tableCells?: { content?: unknown[] }[] }[] } }>) {
+          for (const pe of el.paragraph?.elements ?? []) texto += pe.textRun?.content ?? ''
+          if (el.table) {
+            const first = el.table.tableRows?.[0]?.tableCells?.[0]
+            walk(first?.content)
+            if (texto.includes('Producto Utilizado')) tablaProductos = true
+            for (const row of el.table.tableRows ?? [])
+              for (const cell of row.tableCells ?? []) walk(cell.content)
+          }
+        }
+      }
+      walk(doc.body?.content)
+      out.contenido = {
+        marcadores: [...new Set(texto.match(/\{\{[^}]*\}\}/g) ?? [])],
+        tieneTablaProductos: tablaProductos,
+      }
+    } catch (e) {
+      out.contenido = `ERROR: ${e instanceof Error ? e.message : e}`
+    }
+  }
 
   out.plantilla_certificado = await check(process.env.CERTIFICADO_TEMPLATE_ID)
   out.carpeta_certificados = await check(process.env.CERTIFICADOS_FOLDER_ID)
