@@ -48,9 +48,12 @@ export async function POST(request: Request) {
     }
   })
 
-  const { url } = await generarCertificado(cliente, filas, fechaHoy())
-
-  await supabase.from('clientes').update({ certificado_url: url }).eq('id', clienteId)
-
-  return NextResponse.json({ data: { url } })
+  try {
+    const { url } = await generarCertificado(cliente, filas, fechaHoy())
+    await supabase.from('clientes').update({ certificado_url: url }).eq('id', clienteId)
+    return NextResponse.json({ data: { url } })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Error generando el certificado'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

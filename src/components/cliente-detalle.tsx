@@ -17,6 +17,8 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Divider from '@mui/material/Divider'
+import Snackbar from '@mui/material/Snackbar'
+import MuiAlert from '@mui/material/Alert'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -48,6 +50,7 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
   const [generandoCertificado, setGenerandoCertificado] = useState(false)
   const [certificadoUrl, setCertificadoUrl] = useState(cliente.certificado_url ?? null)
   const [catalogo, setCatalogo] = useState<Producto[]>([])
+  const [accionError, setAccionError] = useState<string | null>(null)
 
   const productos = cliente.productos_certificado ?? []
   useEffect(() => {
@@ -65,33 +68,45 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
   async function handleGenerarContrato() {
     if (generandoContrato) return
     setGenerandoContrato(true)
-    const res = await fetch('/api/contratos/generar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clienteId: cliente.id }),
-    })
-    const { data } = await res.json()
-    if (data?.url) {
-      setContratoUrl(data.url)
-      window.open(data.url, '_blank')
+    try {
+      const res = await fetch('/api/contratos/generar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clienteId: cliente.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) throw new Error(json.error ?? 'Error al generar el contrato')
+      if (json.data?.url) {
+        setContratoUrl(json.data.url)
+        window.open(json.data.url, '_blank')
+      }
+    } catch (e) {
+      setAccionError(e instanceof Error ? e.message : 'Error al generar el contrato')
+    } finally {
+      setGenerandoContrato(false)
     }
-    setGenerandoContrato(false)
   }
 
   async function handleGenerarCertificado() {
     if (generandoCertificado) return
     setGenerandoCertificado(true)
-    const res = await fetch('/api/certificados/generar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clienteId: cliente.id }),
-    })
-    const { data } = await res.json()
-    if (data?.url) {
-      setCertificadoUrl(data.url)
-      window.open(data.url, '_blank')
+    try {
+      const res = await fetch('/api/certificados/generar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clienteId: cliente.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) throw new Error(json.error ?? 'Error al generar el certificado')
+      if (json.data?.url) {
+        setCertificadoUrl(json.data.url)
+        window.open(json.data.url, '_blank')
+      }
+    } catch (e) {
+      setAccionError(e instanceof Error ? e.message : 'Error al generar el certificado')
+    } finally {
+      setGenerandoCertificado(false)
     }
-    setGenerandoCertificado(false)
   }
 
   async function handleNuevaVisita() {
@@ -389,6 +404,17 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
           <Button variant="contained" color="error" onClick={handleDelete}>Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!accionError}
+        autoHideDuration={8000}
+        onClose={() => setAccionError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <MuiAlert severity="error" onClose={() => setAccionError(null)} sx={{ width: '100%' }}>
+          {accionError}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   )
 }
