@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Card from '@mui/material/Card'
@@ -33,7 +33,8 @@ import ArticleIcon from '@mui/icons-material/Article'
 import DescriptionIcon from '@mui/icons-material/Description'
 import VerifiedIcon from '@mui/icons-material/Verified'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import type { Cliente } from '@/lib/types'
+import ScienceIcon from '@mui/icons-material/Science'
+import type { Cliente, Producto } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
 interface Visita { id: string; fecha_tratamiento: string; tipo_servicio: string | null; estado: string }
@@ -46,6 +47,14 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
   const [contratoUrl, setContratoUrl] = useState(cliente.contrato_url ?? null)
   const [generandoCertificado, setGenerandoCertificado] = useState(false)
   const [certificadoUrl, setCertificadoUrl] = useState(cliente.certificado_url ?? null)
+  const [catalogo, setCatalogo] = useState<Producto[]>([])
+
+  const productos = cliente.productos_certificado ?? []
+  useEffect(() => {
+    if (productos.length > 0) {
+      fetch('/api/productos').then(r => r.json()).then(({ data }) => setCatalogo(data ?? []))
+    }
+  }, [productos.length])
 
   async function handleDelete() {
     await fetch(`/api/clientes/${cliente.id}`, { method: 'DELETE' })
@@ -234,6 +243,37 @@ export default function ClienteDetalle({ cliente, visitas }: { cliente: Cliente;
                 </Box>
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Productos (certificado) */}
+      {productos.length > 0 && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Typography variant="overline" color="text.secondary">Productos</Typography>
+            {productos.map((p, i) => {
+              const prod = catalogo.find(c => c.id === p.producto_id)
+              return (
+                <Box key={p.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, ...(i > 0 && { pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }) }}>
+                  <ScienceIcon fontSize="small" sx={{ color: 'text.disabled', mt: 0.25 }} />
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{prod?.nombre_comercial ?? '—'}</Typography>
+                    {prod?.numero_registro && (
+                      <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>Reg. {prod.numero_registro}</Typography>
+                    )}
+                    {prod?.plazo_seguridad != null && (
+                      <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>Plazo seguridad: {prod.plazo_seguridad}</Typography>
+                    )}
+                    <Typography variant="body2" sx={{ mt: 0.25 }}>
+                      {p.cantidad && <>Cantidad: {p.cantidad}</>}
+                      {p.cantidad && p.vector_diana && ' · '}
+                      {p.vector_diana && <>Vector diana: {p.vector_diana}</>}
+                    </Typography>
+                  </Box>
+                </Box>
+              )
+            })}
           </CardContent>
         </Card>
       )}

@@ -11,10 +11,49 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
+import Autocomplete from '@mui/material/Autocomplete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
 import Alert from '@mui/material/Alert'
-import type { Cliente } from '@/lib/types'
+import type { Cliente, Producto, ProductoCertificado } from '@/lib/types'
+
+const MAX_PRODUCTOS = 5
+
+function ProductoSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  if (!loaded) {
+    fetch('/api/productos').then(r => r.json()).then(({ data }) => { setProductos(data ?? []); setLoaded(true) })
+  }
+
+  const selected = productos.find(p => p.id === value) ?? null
+
+  return (
+    <Autocomplete
+      options={productos}
+      getOptionLabel={p => p.nombre_comercial}
+      value={selected}
+      onChange={(_, p) => onChange(p?.id ?? '')}
+      noOptionsText="Sin productos"
+      renderInput={params => <TextField {...params} placeholder="Buscar producto..." size="small" />}
+      renderOption={(props, p) => (
+        <li {...props} key={p.id}>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>{p.nombre_comercial}</Typography>
+            {p.numero_registro && <Typography variant="caption" color="text.secondary">Reg. {p.numero_registro}</Typography>}
+          </Box>
+        </li>
+      )}
+    />
+  )
+}
+
+function newProductoCertificado(): ProductoCertificado {
+  return { id: crypto.randomUUID(), producto_id: '', cantidad: '', vector_diana: '' }
+}
 
 export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
   const router = useRouter()
@@ -35,16 +74,28 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
     actuacion_texto: cliente?.actuacion_texto ?? '',
     importe_traslado: cliente?.importe_traslado?.toString() ?? '',
   })
+  const [productos, setProductos] = useState<ProductoCertificado[]>(cliente?.productos_certificado ?? [])
 
   function update(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  function addProducto() {
+    setProductos(prev => prev.length < MAX_PRODUCTOS ? [...prev, newProductoCertificado()] : prev)
+  }
+  function updateProducto(id: string, patch: Partial<ProductoCertificado>) {
+    setProductos(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))
+  }
+  function removeProducto(id: string) {
+    setProductos(prev => prev.filter(p => p.id !== id))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    const payload = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v || null]))
+    const payload: Record<string, unknown> = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v || null]))
     payload.nombre_comercial = form.nombre_comercial
+    payload.productos_certificado = productos.filter(p => p.producto_id)
 
     if (cliente) {
       const res = await fetch(`/api/clientes/${cliente.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -169,6 +220,43 @@ export default function ClienteForm({ cliente }: { cliente?: Cliente }) {
             onChange={e => update('importe_traslado', e.target.value)}
             placeholder="0.00"
           />
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '20px !important' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="subtitle2" color="text.secondary">Productos (certificado)</Typography>
+            <Typography variant="caption" color="text.disabled">{productos.length}/{MAX_PRODUCTOS}</Typography>
+          </Box>
+
+          {productos.length === 0 && (
+            <Typography variant="body2" color="text.disabled">Sin productos. Añade hasta {MAX_PRODUCTOS}.</Typography>
+          )}
+
+          {productos.map((p, i) => (
+            <Box key={p.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', fontSize: 10 }}>
+                  Producto {i + 1}
+                </Typography>
+                <IconButton size="small" onClick={() => removeProducto(p.id)} sx={{ color: 'error.light' }}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <ProductoSelect value={p.producto_id} onChange={producto_id => updateProducto(p.id, { producto_id })} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mt: 1.5 }}>
+                <TextField size="small" label="Cantidad" placeholder="Ej: 250 ml" value={p.cantidad} onChange={e => updateProducto(p.id, { cantidad: e.target.value })} />
+                <TextField size="small" label="Vector diana" placeholder="Ej: Cucarachas" value={p.vector_diana} onChange={e => updateProducto(p.id, { vector_diana: e.target.value })} />
+              </Box>
+            </Box>
+          ))}
+
+          {productos.length < MAX_PRODUCTOS && (
+            <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={addProducto} sx={{ alignSelf: 'flex-start' }}>
+              Añadir producto
+            </Button>
+          )}
         </CardContent>
       </Card>
 

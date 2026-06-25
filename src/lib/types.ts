@@ -16,7 +16,15 @@ export type Cliente = {
   importe_traslado: number | null
   contrato_url: string | null
   certificado_url: string | null
+  productos_certificado: ProductoCertificado[] | null
   created_at: string
+}
+
+export type ProductoCertificado = {
+  id: string
+  producto_id: string
+  cantidad: string
+  vector_diana: string
 }
 
 export type Producto = {
