@@ -4,7 +4,7 @@ import { getOAuth2Client } from '@/lib/google/auth'
 
 // TEMPORAL: diagnóstico de la cuenta de Google y acceso a plantilla/carpeta.
 // Borrar tras depurar.
-export async function GET() {
+export async function GET(request: Request) {
   const auth = getOAuth2Client()
   const drive = google.drive({ version: 'v3', auth })
 
@@ -26,6 +26,9 @@ export async function GET() {
       return `ERROR: ${e instanceof Error ? e.message : e}`
     }
   }
+
+  const idConsulta = new URL(request.url).searchParams.get('id')
+  if (idConsulta) out.consulta = await check(idConsulta)
 
   out.plantilla_certificado = await check(process.env.CERTIFICADO_TEMPLATE_ID)
   out.carpeta_certificados = await check(process.env.CERTIFICADOS_FOLDER_ID)
