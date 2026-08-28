@@ -200,7 +200,7 @@ export default function PDTDocument({ visita, cliente, productosMap, partNum }: 
           <View style={s.section}>
             <SectionBar>Datos del cliente</SectionBar>
             <View style={s.row}>
-              <Field label="Razón social / Nombre" value={cliente.nombre_comercial} />
+              <Field label="Nombre comercial" value={cliente.nombre_comercial} />
               <Field label="Persona de contacto" value={cliente.nombre} last />
             </View>
             <View style={s.row}>
